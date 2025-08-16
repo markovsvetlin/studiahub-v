@@ -4,7 +4,7 @@ import { useState } from 'react'
 export default function ItemDemo() {
   const [creating, setCreating] = useState(false)
   const [fetching, setFetching] = useState(false)
-  const [result, setResult] = useState<any>(null)
+  const [result, setResult] = useState<{ ok: boolean, item?: { id: string, name: string, createdAt: string } } | null>(null)
   const [id, setId] = useState('')
   const base = process.env.NEXT_PUBLIC_API_BASE || ''
 
