@@ -11,7 +11,7 @@ const client = new DynamoDBClient({
 })
 const ddb = DynamoDBDocumentClient.from(client)
 
-const tableName = process.env.TABLE_NAME || ''
+const tableName = process.env.TABLE_NAME || 'studiahub-backend-dev-items'
 
 export async function create(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
   try {
