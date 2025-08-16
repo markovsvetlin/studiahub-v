@@ -1,0 +1,17 @@
+# Dependencies
+**/node_modules/**
+
+# Env
+**/.env
+**/.env.*
+!.env.example
+
+# Build outputs
+**/.next/**
+**/.serverless/**
+**/.esbuild/**
+**/dist/**
+**/.dynamodb/**
+
+# OS/IDE
+.DS_Store

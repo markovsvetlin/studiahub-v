@@ -1,0 +1,109 @@
+service: studiahub-backend
+
+frameworkVersion: "3"
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: ${opt:region, 'us-east-1'}
+  stage: ${opt:stage, 'dev'}
+  httpApi:
+    cors: true
+  environment:
+    TABLE_NAME: ${self:service}-${self:provider.stage}-items
+    S3_BUCKET: ${env:S3_BUCKET, '${self:service}-${self:provider.stage}-assets'}
+    OPENAI_API_KEY: ${env:OPENAI_API_KEY}
+    STRIPE_SECRET_KEY: ${env:STRIPE_SECRET_KEY}
+    STRIPE_WEBHOOK_SECRET: ${env:STRIPE_WEBHOOK_SECRET}
+    STRIPE_MONTHLY_PRICE_ID: ${env:STRIPE_MONTHLY_PRICE_ID}
+    STRIPE_ANNUAL_PRICE_ID: ${env:STRIPE_ANNUAL_PRICE_ID}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+            - s3:GetObject
+            - s3:DeleteObject
+            - s3:ListBucket
+          Resource:
+            - arn:aws:s3:::${self:provider.environment.S3_BUCKET}/*
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TABLE_NAME}
+
+plugins:
+  - serverless-esbuild
+  - serverless-dotenv-plugin
+  - serverless-offline
+
+custom:
+  esbuild:
+    bundle: true
+    minify: true
+    target: node20
+    sourcemap: true
+    platform: node
+    concurrency: 10
+  serverless-offline:
+    httpPort: 4000
+  dotenv:
+    path: .env.${sls:stage}
+
+functions:
+  health:
+    handler: src/handlers/health.handler
+    events:
+      - httpApi:
+          path: /health
+          method: GET
+  itemsCreate:
+    handler: src/handlers/items.create
+    events:
+      - httpApi:
+          path: /items
+          method: POST
+  itemsGet:
+    handler: src/handlers/items.get
+    events:
+      - httpApi:
+          path: /items/{id}
+          method: GET
+  filesUpload:
+    handler: src/handlers/files.upload
+    events:
+      - httpApi:
+          path: /files
+          method: POST
+  filesGet:
+    handler: src/handlers/files.get
+    events:
+      - httpApi:
+          path: /files/{key}
+          method: GET
+
+resources:
+  Resources:
+    ItemsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.TABLE_NAME}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+
+package:
+  patterns:
+    - '!node_modules/**'
+    - '!test/**'
