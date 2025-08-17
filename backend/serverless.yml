@@ -10,7 +10,7 @@ provider:
   httpApi:
     cors: true
   environment:
-    TABLE_NAME: ${self:service}-${self:provider.stage}-items
+    DATABASE_URL: ${env:DATABASE_URL}
     S3_BUCKET: ${env:S3_BUCKET, '${self:service}-${self:provider.stage}-assets'}
     OPENAI_API_KEY: ${env:OPENAI_API_KEY}
     STRIPE_SECRET_KEY: ${env:STRIPE_SECRET_KEY}
@@ -28,16 +28,6 @@ provider:
             - s3:ListBucket
           Resource:
             - arn:aws:s3:::${self:provider.environment.S3_BUCKET}/*
-        - Effect: Allow
-          Action:
-            - dynamodb:PutItem
-            - dynamodb:GetItem
-            - dynamodb:Query
-            - dynamodb:Scan
-            - dynamodb:UpdateItem
-            - dynamodb:DeleteItem
-          Resource:
-            - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TABLE_NAME}
 
 plugins:
   - serverless-esbuild
@@ -52,6 +42,9 @@ custom:
     sourcemap: true
     platform: node
     concurrency: 10
+    external:
+      - '@prisma/client'
+    keepOutputDirectory: true
   serverless-offline:
     httpPort: 4000
   dotenv:
@@ -91,19 +84,12 @@ functions:
 
 resources:
   Resources:
-    ItemsTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: ${self:provider.environment.TABLE_NAME}
-        BillingMode: PAY_PER_REQUEST
-        AttributeDefinitions:
-          - AttributeName: id
-            AttributeType: S
-        KeySchema:
-          - AttributeName: id
-            KeyType: HASH
+    # No DynamoDB resources required; using Aurora PostgreSQL
 
 package:
   patterns:
     - '!node_modules/**'
     - '!test/**'
+    # Re-include Prisma client + engines for Lambda runtime
+    - 'node_modules/.prisma/**'
+    - 'node_modules/@prisma/**'

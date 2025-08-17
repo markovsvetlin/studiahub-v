@@ -1,0 +1,165 @@
+'use client'
+import { useCallback, useMemo, useRef, useState } from 'react'
+import { GraduationCap, Loader2 } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { DropArea } from './DropArea'
+import { FileList } from './FileList'
+import { formatBytes, makeFileKey } from './utils'
+
+export type UploadDropzoneProps = {
+  onFilesAdded?: (files: File[]) => void
+  onChange?: (files: File[]) => void
+  onProcess?: (files: File[], update: (key: string, progress: number, status?: 'processing' | 'done' | 'error') => void) => Promise<void>
+  accept?: string[]
+  maxTotalBytes?: number
+  caption?: string
+}
+
+export default function UploadDropzone({
+  onFilesAdded,
+  onChange,
+  onProcess,
+  accept = [
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'image/*',
+  ],
+  maxTotalBytes = 15 * 1024 * 1024,
+  caption = 'Multiple files · Max 15MB total · PDF, DOCX, Images (including HEIC)'
+}: UploadDropzoneProps) {
+  const [isDragging, setIsDragging] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [fileProgressByKey, setFileProgressByKey] = useState<Record<string, { progress: number, status: 'idle' | 'processing' | 'done' | 'error' }>>({})
+
+  const inputRef = useRef<HTMLInputElement | null>(null)
+
+  const acceptAttr = useMemo(() => accept.join(','), [accept])
+  const limitMB = useMemo(() => (maxTotalBytes / (1024 * 1024)).toFixed(0), [maxTotalBytes])
+
+  const makeKey = useCallback((f: File) => makeFileKey(f), [])
+
+  const setProgress = useCallback((key: string, progress: number, status: 'processing' | 'done' | 'error' = 'processing') => {
+    setFileProgressByKey(prev => ({
+      ...prev,
+      [key]: { progress, status }
+    }))
+  }, [])
+
+  const handleFiles = useCallback((incoming: FileList | File[]) => {
+    const newFiles: File[] = Array.isArray(incoming) ? incoming : Array.from(incoming as FileList)
+    const dedupedMap = new Map<string, File>()
+    ;[...selectedFiles, ...newFiles].forEach((f) => dedupedMap.set(makeKey(f), f))
+    const combined = Array.from(dedupedMap.values())
+    const total = combined.reduce((sum, f) => sum + f.size, 0)
+    if (total > maxTotalBytes) {
+      setError(`Total ${formatBytes(total)} exceeds limit ${limitMB}MB`)
+      return
+    }
+    setError(null)
+    setSelectedFiles(combined)
+    onFilesAdded?.(newFiles)
+    onChange?.(combined)
+  }, [limitMB, maxTotalBytes, onChange, onFilesAdded, selectedFiles, makeKey])
+
+  const removeFile = useCallback((key: string) => {
+    setSelectedFiles((prev) => {
+      const next = prev.filter((f) => makeKey(f) !== key)
+      onChange?.(next)
+      return next
+    })
+  }, [onChange, makeKey])
+
+  const totalBytes = useMemo(() => selectedFiles.reduce((s, f) => s + f.size, 0), [selectedFiles])
+
+  const handleSubmit = useCallback(async () => {
+    if (selectedFiles.length === 0) return
+    setIsSubmitting(true)
+    try {
+      const initial: Record<string, { progress: number, status: 'idle' | 'processing' | 'done' | 'error' }> = {}
+      selectedFiles.forEach(f => { initial[makeKey(f)] = { progress: 0, status: 'idle' } })
+      setFileProgressByKey(initial)
+
+      if (onProcess) {
+        await onProcess(selectedFiles, (key, progress, status) => setProgress(key, progress, status))
+      } else {
+        // Simulated parallel processing
+        const delay = (ms: number) => new Promise(r => setTimeout(r, ms))
+        await Promise.all(selectedFiles.map(async (f) => {
+          const key = makeKey(f)
+          setProgress(key, 0, 'processing')
+          let p = 0
+          while (p < 100) {
+            await delay(80 + Math.random() * 60)
+            p = Math.min(100, p + 5 + Math.random() * 20)
+            setProgress(key, p, p >= 100 ? 'done' : 'processing')
+          }
+        }))
+      }
+    } finally {
+      setIsSubmitting(false)
+      if (inputRef.current) inputRef.current.value = ''
+      setSelectedFiles([])
+      setFileProgressByKey({})
+    }
+  }, [makeKey, onProcess, selectedFiles, setProgress])
+
+  const openPicker = () => { if (inputRef.current) inputRef.current.value = ''; inputRef.current?.click() }
+
+  return (
+    <Card className="space-y-4 max-w-4xl w-full">
+      <CardHeader>
+        <CardTitle className='text-xl font-bold flex items-center gap-2'>
+          <GraduationCap className="h-7 w-7 text-indigo-400" />
+          Upload Course Material
+        </CardTitle>
+        <div className="text-sm text-neutral-400">Upload your lecture notes, documents, or images to start generating interactive quizzes and study material</div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <DropArea
+          isDragging={isDragging}
+          setIsDragging={setIsDragging}
+          onFiles={(files: FileList | File[]) => handleFiles(files)}
+          onOpenPicker={openPicker}
+          caption={caption}
+          selectedCount={selectedFiles.length}
+          totalBytes={totalBytes}
+          limitMB={limitMB}
+        />
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          accept={acceptAttr}
+          className="hidden"
+          onChange={(e) => e.target.files && handleFiles(e.target.files)}
+        />
+
+        {error && (
+          <div className="text-xs text-red-400" aria-live="polite">{error}</div>
+        )}
+
+        {selectedFiles.length > 0 && (
+          <FileList
+            files={selectedFiles}
+            makeKey={makeKey}
+            formatBytes={formatBytes}
+            progressMap={fileProgressByKey}
+            onRemove={removeFile}
+          />
+        )}
+
+        <div className="flex justify-end">
+          <Button className='cursor-pointer' disabled={selectedFiles.length === 0 || isSubmitting} size="lg" onClick={handleSubmit}>
+            {isSubmitting && <Loader2 className="animate-spin" />}
+            {isSubmitting ? 'Processing…' : 'Add to Knowledge Base'}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+

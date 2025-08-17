@@ -3,15 +3,19 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "npm run kill:offline && dotenv -e .env.dev -- serverless offline --stage dev",
+    "dev": "npm run kill:offline && cross-env DOTENV_CONFIG_PATH=.env.dev node -r dotenv/config ./node_modules/.bin/serverless offline --stage dev",
     "deploy": "serverless deploy",
     "remove": "serverless remove",
-    "dev:dev": "dotenv -e .env.dev -- serverless offline --stage dev",
-    "deploy:prod": "dotenv -e .env.prod -- serverless deploy --stage prod --region us-east-1",
-    "deploy:dev": "dotenv -e .env.dev -- serverless deploy --stage dev --region us-east-1",
-    "print:dev": "dotenv -e .env.dev -- serverless print --stage dev",
-    "print:prod": "dotenv -e .env.prod -- serverless print --stage prod",
-    "kill:offline": "lsof -ti :4000 | xargs -r kill -9; lsof -ti :3002 | xargs -r kill -9; pkill -f \"serverless offline\" || true"
+    "dev:dev": "cross-env DOTENV_CONFIG_PATH=.env.dev node -r dotenv/config ./node_modules/.bin/serverless offline --stage dev",
+    "deploy:prod": "cross-env DOTENV_CONFIG_PATH=.env.prod node -r dotenv/config ./node_modules/.bin/serverless deploy --stage prod --region us-east-1",
+    "deploy:dev": "cross-env DOTENV_CONFIG_PATH=.env.dev node -r dotenv/config ./node_modules/.bin/serverless deploy --stage dev --region us-east-1",
+    "print:dev": "cross-env DOTENV_CONFIG_PATH=.env.dev node -r dotenv/config ./node_modules/.bin/serverless print --stage dev",
+    "print:prod": "cross-env DOTENV_CONFIG_PATH=.env.prod node -r dotenv/config ./node_modules/.bin/serverless print --stage prod",
+    "kill:offline": "lsof -ti :4000 | xargs -r kill -9; lsof -ti :3002 | xargs -r kill -9; pkill -f \"serverless offline\" || true",
+    "db:generate": "cross-env DOTENV_CONFIG_PATH=.env.dev node -r dotenv/config ./node_modules/.bin/prisma generate",
+    "db:migrate": "cross-env DOTENV_CONFIG_PATH=.env.dev node -r dotenv/config ./node_modules/.bin/prisma migrate dev --name init_items",
+    "db:studio": "cross-env DOTENV_CONFIG_PATH=.env.dev node -r dotenv/config ./node_modules/.bin/prisma studio",
+    "db:deploy": "cross-env DOTENV_CONFIG_PATH=.env.prod node -r dotenv/config ./node_modules/.bin/prisma migrate deploy"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.137",
@@ -22,10 +26,12 @@
     "serverless-esbuild": "^1.54.7",
     "serverless-offline": "^13.8.0",
     "typescript": "^5.6.3",
-    "dotenv-cli": "^7.4.2"
+    "prisma": "^5.18.0",
+    "dotenv-cli": "^7.4.2",
+    "cross-env": "^7.0.3"
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.868.0",
+    "@prisma/client": "^5.18.0",
     "@aws-sdk/client-s3": "^3.864.0",
     "@aws-sdk/lib-dynamodb": "^3.868.0"
   }
