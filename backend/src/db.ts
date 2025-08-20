@@ -1,17 +1,30 @@
-import { PrismaClient } from '@prisma/client'
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
+import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb'
 
-let prisma: PrismaClient
+let dynamoClient: DynamoDBDocumentClient
 
 declare global {
-  var __prisma: PrismaClient | undefined
+  var __dynamoClient: DynamoDBDocumentClient | undefined
 }
 
-if (!global.__prisma) {
-  global.__prisma = new PrismaClient()
+if (!global.__dynamoClient) {
+  const client = new DynamoDBClient({
+    region: process.env.AWS_REGION || 'us-east-1',
+    // For local development with serverless-dynamodb-local
+    ...(process.env.IS_OFFLINE && {
+      endpoint: 'http://localhost:8000',
+      credentials: {
+        accessKeyId: 'fake',
+        secretAccessKey: 'fake'
+      }
+    })
+  })
+  
+  global.__dynamoClient = DynamoDBDocumentClient.from(client)
 }
 
-prisma = global.__prisma
+dynamoClient = global.__dynamoClient
 
-export { prisma }
+export { dynamoClient as db }
 
 

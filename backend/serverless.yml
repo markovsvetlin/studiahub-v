@@ -10,28 +10,68 @@ provider:
   httpApi:
     cors: true
   environment:
-    DATABASE_URL: ${env:DATABASE_URL}
     S3_BUCKET: ${env:S3_BUCKET, '${self:service}-${self:provider.stage}-assets'}
+    PROCESSING_QUEUE_URL:
+      Ref: ProcessingQueue
     OPENAI_API_KEY: ${env:OPENAI_API_KEY}
+    PINECONE_API_KEY: ${env:PINECONE_API_KEY}
+    PINECONE_ENVIRONMENT: ${env:PINECONE_ENVIRONMENT, 'us-east-1-aws'}
     STRIPE_SECRET_KEY: ${env:STRIPE_SECRET_KEY}
     STRIPE_WEBHOOK_SECRET: ${env:STRIPE_WEBHOOK_SECRET}
     STRIPE_MONTHLY_PRICE_ID: ${env:STRIPE_MONTHLY_PRICE_ID}
     STRIPE_ANNUAL_PRICE_ID: ${env:STRIPE_ANNUAL_PRICE_ID}
+    ITEMS_TABLE: ${self:service}-${self:provider.stage}-items
+    FILES_TABLE: ${self:service}-${self:provider.stage}-files
   iam:
     role:
       statements:
         - Effect: Allow
           Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.ITEMS_TABLE}
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.FILES_TABLE}
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.FILES_TABLE}/index/*
+        - Effect: Allow
+          Action:
             - s3:PutObject
             - s3:GetObject
             - s3:DeleteObject
-            - s3:ListBucket
+            - s3:PutObjectAcl
           Resource:
             - arn:aws:s3:::${self:provider.environment.S3_BUCKET}/*
+        - Effect: Allow
+          Action:
+            - s3:ListBucket
+          Resource:
+            - arn:aws:s3:::${self:provider.environment.S3_BUCKET}
+        - Effect: Allow
+          Action:
+            - textract:DetectDocumentText
+            - textract:AnalyzeDocument
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - sqs:SendMessage
+          Resource:
+            - { "Fn::GetAtt": [ ProcessingQueue, Arn ] }
+        - Effect: Allow
+          Action:
+            - sqs:ReceiveMessage
+            - sqs:DeleteMessage
+            - sqs:GetQueueAttributes
+          Resource:
+            - { "Fn::GetAtt": [ ProcessingQueue, Arn ] }
 
 plugins:
   - serverless-esbuild
   - serverless-dotenv-plugin
+  - serverless-dynamodb-local
   - serverless-offline
 
 custom:
@@ -39,12 +79,31 @@ custom:
     bundle: true
     minify: true
     target: node20
-    sourcemap: true
+    sourcemap: false
     platform: node
-    concurrency: 10
-    external:
-      - '@prisma/client'
-    keepOutputDirectory: true
+    concurrency: 4
+    keepOutputDirectory: false
+    packager: npm
+    installExtraArgs:
+      - '--production'
+      - '--no-optional'
+    exclude:
+      - 'typescript'
+      - '@types/*'
+      - 'serverless*'
+      - 'eslint*'
+    watch:
+      pattern: ['src/**/*.ts']
+      ignore: ['.serverless/**/*', '.build/**/*']
+  dynamodb:
+    start:
+      port: 8000
+      inMemory: true
+      heapInitial: 200m
+      heapMax: 1g
+      migrate: true
+    stages:
+      - dev
   serverless-offline:
     httpPort: 4000
   dotenv:
@@ -57,39 +116,101 @@ functions:
       - httpApi:
           path: /health
           method: GET
-  itemsCreate:
-    handler: src/handlers/items.create
-    events:
-      - httpApi:
-          path: /items
-          method: POST
-  itemsGet:
-    handler: src/handlers/items.get
-    events:
-      - httpApi:
-          path: /items/{id}
-          method: GET
-  filesUpload:
-    handler: src/handlers/files.upload
-    events:
-      - httpApi:
-          path: /files
-          method: POST
   filesGet:
-    handler: src/handlers/files.get
+    handler: src/handlers/files/fileStatus.get
     events:
       - httpApi:
-          path: /files/{key}
+          path: /files/{key+}
           method: GET
+  presignedUrl:
+    handler: src/handlers/files/presignedUrl.generatePresignedUrl
+    events:
+      - httpApi:
+          path: /upload/presigned
+          method: POST
+  confirmUpload:
+    handler: src/handlers/files/presignedUrl.confirmUpload
+    events:
+      - httpApi:
+          path: /upload/confirm
+          method: POST
+
+  queueProcessor:
+    handler: src/handlers/files/queue.process
+    timeout: 900
+    memorySize: 2048
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt: [ ProcessingQueue, Arn ]
+          batchSize: 1
 
 resources:
   Resources:
-    # No DynamoDB resources required; using Aurora PostgreSQL
+    ItemsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.ITEMS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        
+    FilesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.FILES_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: key
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: key-index
+            KeySchema:
+              - AttributeName: key
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        BillingMode: PAY_PER_REQUEST
+        
+    ProcessingDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${self:provider.stage}-processing-dlq
+        MessageRetentionPeriod: 1209600
+    ProcessingQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${self:provider.stage}-processing
+        VisibilityTimeout: 900
+        RedrivePolicy:
+          deadLetterTargetArn: { "Fn::GetAtt": [ ProcessingDLQ, Arn ] }
+          maxReceiveCount: 3
 
 package:
   patterns:
-    - '!node_modules/**'
     - '!test/**'
-    # Re-include Prisma client + engines for Lambda runtime
-    - 'node_modules/.prisma/**'
-    - 'node_modules/@prisma/**'
+    - '!**/*.md'
+    - '!**/*.txt'
+    - '!**/LICENSE*'
+    - '!**/CHANGELOG*'
+    - '!**/.git/**'
+    - '!**/docs/**'
+    - '!**/examples/**'
+    - '!**/coverage/**'
+    - '!**/.nyc_output/**'
+    - '!**/prisma/**'
+    - '!**/*.prisma'
+    - '!**/migrations/**'
+    - '!**/.serverless/**'
+    - '!**/.build/**'
+    - '!**/node_modules/.cache/**'
+  individually: true
+  excludeDevDependencies: true

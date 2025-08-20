@@ -6,7 +6,7 @@ export default function ItemDemo() {
   const [fetching, setFetching] = useState(false)
   const [result, setResult] = useState<{ ok: boolean, item?: { id: string, name: string, createdAt: string } } | null>(null)
   const [id, setId] = useState('')
-  const base = process.env.NEXT_PUBLIC_API_BASE || ''
+  const base = process.env.NEXT_PUBLIC_API_BASE || 'https://oyehv715ef.execute-api.us-east-1.amazonaws.com'
 
   const createItem = async () => {
     setCreating(true)

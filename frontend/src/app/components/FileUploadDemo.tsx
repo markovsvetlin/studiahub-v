@@ -5,7 +5,7 @@ export default function FileUploadDemo() {
   const [file, setFile] = useState<File | null>(null)
   const [key, setKey] = useState('upload-' + Date.now() + '.pdf')
   const [result, setResult] = useState<{ ok: boolean, preview?: string } | null>(null)
-  const base = process.env.NEXT_PUBLIC_API_BASE || ''
+  const base = process.env.NEXT_PUBLIC_API_BASE || 'https://oyehv715ef.execute-api.us-east-1.amazonaws.com'
 
   const upload = async () => {
     if (!file) return

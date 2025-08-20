@@ -5,12 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { DropArea } from './DropArea'
 import { FileList } from './FileList'
-import { formatBytes, makeFileKey } from './utils'
+import { formatBytes, makeFileKey, uploadToBackend } from './utils'
 
 export type UploadDropzoneProps = {
   onFilesAdded?: (files: File[]) => void
   onChange?: (files: File[]) => void
-  onProcess?: (files: File[], update: (key: string, progress: number, status?: 'processing' | 'done' | 'error') => void) => Promise<void>
   accept?: string[]
   maxTotalBytes?: number
   caption?: string
@@ -19,14 +18,13 @@ export type UploadDropzoneProps = {
 export default function UploadDropzone({
   onFilesAdded,
   onChange,
-  onProcess,
   accept = [
     'application/pdf',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'image/*',
   ],
-  maxTotalBytes = 15 * 1024 * 1024,
-  caption = 'Multiple files · Max 15MB total · PDF, DOCX, Images (including HEIC)'
+  maxTotalBytes = 200 * 1024 * 1024,
+  caption = 'Multiple files · Max 200MB total · PDF, DOCX, Images (including HEIC)'
 }: UploadDropzoneProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -42,10 +40,24 @@ export default function UploadDropzone({
   const makeKey = useCallback((f: File) => makeFileKey(f), [])
 
   const setProgress = useCallback((key: string, progress: number, status: 'processing' | 'done' | 'error' = 'processing') => {
-    setFileProgressByKey(prev => ({
-      ...prev,
-      [key]: { progress, status }
-    }))
+    setFileProgressByKey(prev => {
+      const current = prev[key]
+      
+      // Always update if status is changing to done/error, or if no current progress
+      if (!current || status === 'done' || status === 'error') {
+        return {
+          ...prev,
+          [key]: { progress, status }
+        }
+      }
+      
+      // Only update progress if it's moving forward
+      const newProgress = Math.max(current.progress, progress)
+      return {
+        ...prev,
+        [key]: { progress: newProgress, status }
+      }
+    })
   }, [])
 
   const handleFiles = useCallback((incoming: FileList | File[]) => {
@@ -77,34 +89,39 @@ export default function UploadDropzone({
   const handleSubmit = useCallback(async () => {
     if (selectedFiles.length === 0) return
     setIsSubmitting(true)
+    
+    let cleanupInterval: NodeJS.Timeout | null = null
+    
     try {
       const initial: Record<string, { progress: number, status: 'idle' | 'processing' | 'done' | 'error' }> = {}
       selectedFiles.forEach(f => { initial[makeKey(f)] = { progress: 0, status: 'idle' } })
       setFileProgressByKey(initial)
 
-      if (onProcess) {
-        await onProcess(selectedFiles, (key, progress, status) => setProgress(key, progress, status))
-      } else {
-        // Simulated parallel processing
-        const delay = (ms: number) => new Promise(r => setTimeout(r, ms))
-        await Promise.all(selectedFiles.map(async (f) => {
-          const key = makeKey(f)
-          setProgress(key, 0, 'processing')
-          let p = 0
-          while (p < 100) {
-            await delay(80 + Math.random() * 60)
-            p = Math.min(100, p + 5 + Math.random() * 20)
-            setProgress(key, p, p >= 100 ? 'done' : 'processing')
-          }
-        }))
-      }
+      await uploadToBackend(selectedFiles, (k: string, p: number, s?: 'processing' | 'done' | 'error') => setProgress(k, p, s))
     } finally {
-      setIsSubmitting(false)
-      if (inputRef.current) inputRef.current.value = ''
-      setSelectedFiles([])
-      setFileProgressByKey({})
+      // keep submitting state until all visible rows are done
+      cleanupInterval = setInterval(() => {
+        setFileProgressByKey(currentProgress => {
+          const anyProcessing = Object.values(currentProgress).some(v => v.status !== 'done' && v.status !== 'error')
+          if (!anyProcessing && Object.keys(currentProgress).length > 0) {
+            setIsSubmitting(false)
+            if (inputRef.current) inputRef.current.value = ''
+            setSelectedFiles([])
+            if (cleanupInterval) clearInterval(cleanupInterval)
+            return {}
+          }
+          return currentProgress
+        })
+      }, 500)
     }
-  }, [makeKey, onProcess, selectedFiles, setProgress])
+    
+    // Cleanup function for safety
+    return () => {
+      if (cleanupInterval) {
+        clearInterval(cleanupInterval)
+      }
+    }
+  }, [makeKey, selectedFiles, setProgress])
 
   const openPicker = () => { if (inputRef.current) inputRef.current.value = ''; inputRef.current?.click() }
 
@@ -154,7 +171,7 @@ export default function UploadDropzone({
         <div className="flex justify-end">
           <Button className='cursor-pointer' disabled={selectedFiles.length === 0 || isSubmitting} size="lg" onClick={handleSubmit}>
             {isSubmitting && <Loader2 className="animate-spin" />}
-            {isSubmitting ? 'Processing…' : 'Add to Knowledge Base'}
+            {isSubmitting ? 'Uploading…' : 'Add to Knowledge Base'}
           </Button>
         </div>
       </CardContent>
