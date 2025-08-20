@@ -10,6 +10,7 @@ import { formatBytes, makeFileKey, uploadToBackend } from './utils'
 export type UploadDropzoneProps = {
   onFilesAdded?: (files: File[]) => void
   onChange?: (files: File[]) => void
+  onUploadComplete?: () => void
   accept?: string[]
   maxTotalBytes?: number
   caption?: string
@@ -18,6 +19,7 @@ export type UploadDropzoneProps = {
 export default function UploadDropzone({
   onFilesAdded,
   onChange,
+  onUploadComplete,
   accept = [
     'application/pdf',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -108,6 +110,10 @@ export default function UploadDropzone({
             if (inputRef.current) inputRef.current.value = ''
             setSelectedFiles([])
             if (cleanupInterval) clearInterval(cleanupInterval)
+            
+            // Trigger files list refresh when all uploads complete
+            onUploadComplete?.()
+            
             return {}
           }
           return currentProgress

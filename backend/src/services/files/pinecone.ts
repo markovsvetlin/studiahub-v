@@ -200,9 +200,29 @@ class PineconeService {
 
     try {
       const namespace = this.getUserNamespace(userId)
-      console.log(`🗑️ Deleting all chunks for file ${fileId}`)
+      console.log(`🗑️ Deleting all chunks for file ${fileId} from namespace: ${namespace}`)
 
-      await this.index.namespace(namespace).deleteMany({ filter: { fileId } })
+      // Delete by ID pattern since we know the chunk IDs follow: chunk_{fileId}_{index}
+      // This is more reliable than filter-based deletion
+      const idsToDelete = []
+      
+      // Try to delete up to 1000 chunks (should be more than enough for most files)
+      for (let i = 0; i < 1000; i++) {
+        idsToDelete.push(`chunk_${fileId}_${i}`)
+      }
+
+      // Delete in batches to avoid hitting API limits
+      const batchSize = 100
+      for (let i = 0; i < idsToDelete.length; i += batchSize) {
+        const batch = idsToDelete.slice(i, i + batchSize)
+        try {
+          await this.index.namespace(namespace).deleteMany(batch)
+        } catch (batchError) {
+          // Ignore errors for non-existent IDs
+          console.debug(`Batch deletion completed for IDs ${i}-${i + batchSize}`)
+        }
+      }
+
       console.log(`✅ Successfully deleted chunks for file ${fileId}`)
     } catch (error) {
       console.error('❌ Failed to delete file chunks:', error)

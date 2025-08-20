@@ -134,6 +134,24 @@ functions:
       - httpApi:
           path: /upload/confirm
           method: POST
+  filesList:
+    handler: src/handlers/files/filesList.list
+    events:
+      - httpApi:
+          path: /files
+          method: GET
+  filesDelete:
+    handler: src/handlers/files/filesList.deleteFile
+    events:
+      - httpApi:
+          path: /files/{id}
+          method: DELETE
+  filesToggle:
+    handler: src/handlers/files/filesList.toggleFile
+    events:
+      - httpApi:
+          path: /files/{id}/toggle
+          method: PATCH
 
   queueProcessor:
     handler: src/handlers/files/queue.process
@@ -146,19 +164,7 @@ functions:
           batchSize: 1
 
 resources:
-  Resources:
-    ItemsTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: ${self:provider.environment.ITEMS_TABLE}
-        AttributeDefinitions:
-          - AttributeName: id
-            AttributeType: S
-        KeySchema:
-          - AttributeName: id
-            KeyType: HASH
-        BillingMode: PAY_PER_REQUEST
-        
+  Resources:    
     FilesTable:
       Type: AWS::DynamoDB::Table
       Properties:

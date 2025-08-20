@@ -15,6 +15,7 @@ export interface FileRecord {
   totalChunks: number;
   createdAt: string;
   updatedAt?: string;
+  isEnabled?: boolean;
 }
 
 /**
@@ -27,7 +28,8 @@ export async function createFileRecord(key: string, status: FileRecord['status']
     status,
     progress: 0,
     totalChunks: 0,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    isEnabled: true
   };
   
   await db.send(new PutCommand({
