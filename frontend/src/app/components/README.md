@@ -2,6 +2,8 @@
 
 **React components** that provide the user interface for document upload, management, and knowledge base interaction.
 
+**Note:** The main dashboard functionality (file upload and management) is located in `/dashboard/page.tsx`, while the landing page with marketing content is in `/page.tsx`.
+
 ## Component Structure
 
 ```

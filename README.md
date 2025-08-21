@@ -1,12 +1,22 @@
 # StudiaHub v2
 
-**AI-powered document processing platform** that transforms course materials (PDFs, DOCX, images) into a searchable knowledge base using OpenAI embeddings and Pinecone vector database.
+**AI-powered learning acceleration platform** that transforms your study materials into personalized, intelligent quizzes designed to maximize learning speed and retention.
 
 ## Quick Context
 
-**What it does:** Upload documents → Extract text → AI chunking → Generate embeddings → Vector search  
-**Architecture:** Serverless (AWS Lambda + Next.js) with event-driven processing  
-**AI Stack:** OpenAI embeddings + Pinecone + AWS Textract OCR
+**What it does:** Upload study materials → Process with AI → Generate personalized quizzes → Accelerate learning  
+**Core Value:** Learn faster through AI-generated quizzes based on your specific content and focus areas  
+**Architecture:** Serverless AI pipeline (AWS Lambda + Next.js) with intelligent content processing  
+**AI Stack:** OpenAI embeddings + Pinecone vector database + AI quiz generation
+
+## 🎯 Learning Features
+
+📚 **AI Quiz Generation**: Creates personalized quizzes from your uploaded content  
+🎯 **Focus Areas**: Set specific topics/subjects for targeted learning sessions  
+🚀 **Learning Acceleration**: Optimized quiz formats for maximum retention and speed  
+📄 **Multi-Format Content**: PDFs, DOCX, images - extract knowledge from any material  
+🧠 **Semantic Understanding**: AI comprehends context, not just keywords  
+⚡ **Real-time Processing**: From upload to quiz-ready in minutes
 
 ## 🚀 Quick Start
 
@@ -29,13 +39,13 @@ cd frontend && npm run dev    # Terminal 2: http://localhost:3000
 
 | Component | Quick Description | Detailed Documentation |
 |-----------|-------------------|------------------------|
-| **Backend** | Serverless API + file processing | [`backend/README.md`](backend/README.md) |
-| **API Handlers** | Lambda functions & endpoints | [`backend/src/handlers/README.md`](backend/src/handlers/README.md) |
-| **Processing Services** | File processing pipeline & AI integration | [`backend/src/services/README.md`](backend/src/services/README.md) |
+| **Backend** | Serverless API + content processing for quiz generation | [`backend/README.md`](backend/README.md) |
+| **API Handlers** | Lambda functions & endpoints for content & quiz management | [`backend/src/handlers/README.md`](backend/src/handlers/README.md) |
+| **Processing Services** | AI pipeline: content extraction → embeddings → quiz preparation | [`backend/src/services/README.md`](backend/src/services/README.md) |
 | **Utilities** | Database operations & shared utilities | [`backend/src/utils/README.md`](backend/src/utils/README.md) |
-| **Frontend** | Next.js app + React components | [`frontend/README.md`](frontend/README.md) |
-| **UI Components** | File upload, management, display | [`frontend/src/app/components/README.md`](frontend/src/app/components/README.md) |
-| **State Management** | Custom hooks & API integration | [`frontend/src/hooks/README.md`](frontend/src/hooks/README.md) |
+| **Frontend** | Learning interface + content management | [`frontend/README.md`](frontend/README.md) |
+| **UI Components** | Content upload, quiz interaction, learning dashboard | [`frontend/src/app/components/README.md`](frontend/src/app/components/README.md) |
+| **State Management** | Learning state & content API integration | [`frontend/src/hooks/README.md`](frontend/src/hooks/README.md) |
 
 ## 🧠 AI Assistant Context
 
@@ -53,7 +63,7 @@ Each folder contains focused documentation for efficient development assistance:
 | **Frontend** | Next.js 15, React 19, TypeScript, Tailwind CSS |
 | **Backend** | Node.js 20, AWS Lambda, Serverless Framework 3.39 |
 | **Database** | DynamoDB, Pinecone Vector DB |
-| **AI/ML** | OpenAI text-embedding-3-large, AWS Textract |
+| **AI/ML** | OpenAI embeddings + quiz generation, AWS Textract OCR |
 | **Infrastructure** | AWS (S3, SQS, API Gateway), Docker |
 
 ## 🔗 Quick Links

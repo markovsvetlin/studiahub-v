@@ -45,25 +45,38 @@ frontend/src/
 ## Key Components
 
 ### 🏠 app/page.tsx
-**Purpose:** Main application page with file management interface
+**Purpose:** Beautiful modern landing page that converts visitors into learners
 
 ```typescript
 export default function Home() {
   return (
-    <main className="min-h-screen p-8 space-y-10">
-      <header>
-        <h1>AI-Powered Learning Hub</h1>
-      </header>
-      <FilesSection />
+    <main className="min-h-screen">
+      {/* Hero Section with gradient background and demo CTA */}
+      {/* Welcome Back Section with Google Sign-in */} 
+      {/* Features showcasing AI learning benefits */}
+      {/* How It Works - 3-step process */}
+      {/* Social proof and final CTA */}
     </main>
   )
 }
 ```
 
 **Structure:**
-- Clean layout with header and main content area
-- Uses `FilesSection` component for file operations
-- Integrates with `useFiles` hook for state management
+- **Unified gradient background** spanning the entire page for seamless visual flow
+- **Side-by-side hero & welcome** with compelling headline and single CTA
+- **Google sign-in card** positioned elegantly on the right side
+- **Feature highlights** showcasing AI quiz generation with glass morphism cards  
+- **Final call-to-action** with enhanced shadow effects and professional styling
+- **Clean footer** with contact info, social links, and legal pages
+- **Minimalist design** focused on conversion with backdrop blur and cohesive color scheme
+
+### 📊 app/dashboard/page.tsx
+**Purpose:** Main application dashboard with file management interface
+
+**Structure:**
+- File upload and management functionality
+- Integration with `useFiles` hook for state management
+- Real-time progress tracking and file operations
 
 ### 📋 FilesSection Component
 **Purpose:** Orchestrates file upload and management
