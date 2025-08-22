@@ -9,7 +9,8 @@ import {
   Loader2,
   Database,
   Calendar,
-  HardDrive
+  HardDrive,
+  Brain
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -17,6 +18,7 @@ import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { FileListItem, FileListProps, SortField, SortDirection } from '@/types/file'
+import QuizDrawer from './QuizDrawer'
 
 function formatBytes(bytes: number): string {
   const sizes = ['B', 'KB', 'MB', 'GB']
@@ -268,15 +270,34 @@ export default function FilesList({
   return (
     <Card className="max-w-4xl w-full">
       <CardHeader>
-        <div>
-          <CardTitle className="text-xl font-bold flex items-center gap-2">
-            <Database className="h-6 w-6 text-indigo-400" />
-            Knowledge Base
-            {isLoading && <Loader2 className="w-4 h-4 animate-spin text-neutral-400" />}
-          </CardTitle>
-          <div className="text-sm text-neutral-400 mt-1">
-            Manage your uploaded documents and context pool
+        <div className="flex items-start justify-between">
+          <div>
+            <CardTitle className="text-xl font-bold flex items-center gap-2">
+              <Database className="h-6 w-6 text-indigo-400" />
+              Knowledge Base
+              {isLoading && <Loader2 className="w-4 h-4 animate-spin text-neutral-400" />}
+            </CardTitle>
+            <div className="text-sm text-neutral-400 mt-1">
+              Manage your uploaded documents and context pool
+            </div>
           </div>
+          
+          <QuizDrawer
+            trigger={
+              <Button 
+                size="lg" 
+                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700"
+              >
+                <Brain className="h-5 w-5" />
+                Generate Quiz
+              </Button>
+            }
+            existingQuizNames={[]} // TODO: Pass actual existing quiz names if needed
+            onGenerateQuiz={(settings) => {
+              console.log('Generating quiz with settings:', settings)
+              // TODO: Implement quiz generation logic
+            }}
+          />
         </div>
 
         {/* Stats Row */}
