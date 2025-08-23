@@ -17,6 +17,7 @@ const service = process.env.SERVICE || "studiahub-backend";
 
 const itemsTableName = `${service}-${stage}-items`;
 const filesTableName = `${service}-${stage}-files`;
+const quizTableName = `${service}-${stage}-quiz`;
 
 const client = new DynamoDBClient({ region, endpoint });
 
@@ -74,6 +75,27 @@ async function main() {
         IndexName: "key-index",
         KeySchema: [
           { AttributeName: "key", KeyType: "HASH" },
+        ],
+        Projection: { ProjectionType: "ALL" },
+      },
+    ],
+    BillingMode: "PAY_PER_REQUEST",
+  });
+
+  await ensureTable({
+    TableName: quizTableName,
+    AttributeDefinitions: [
+      { AttributeName: "id", AttributeType: "S" },
+      { AttributeName: "userId", AttributeType: "S" },
+    ],
+    KeySchema: [
+      { AttributeName: "id", KeyType: "HASH" },
+    ],
+    GlobalSecondaryIndexes: [
+      {
+        IndexName: "userId-index",
+        KeySchema: [
+          { AttributeName: "userId", KeyType: "HASH" },
         ],
         Projection: { ProjectionType: "ALL" },
       },

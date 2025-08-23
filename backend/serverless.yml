@@ -22,6 +22,11 @@ provider:
     STRIPE_ANNUAL_PRICE_ID: ${env:STRIPE_ANNUAL_PRICE_ID}
     ITEMS_TABLE: ${self:service}-${self:provider.stage}-items
     FILES_TABLE: ${self:service}-${self:provider.stage}-files
+    QUIZ_TABLE: ${self:service}-${self:provider.stage}-quiz
+    QUIZ_QUEUE_URL:
+      Ref: QuizQueue
+    WORKER_QUEUE_URL:
+      Ref: WorkerQueue
   iam:
     role:
       statements:
@@ -37,6 +42,8 @@ provider:
             - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.ITEMS_TABLE}
             - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.FILES_TABLE}
             - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.FILES_TABLE}/index/*
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.QUIZ_TABLE}
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.QUIZ_TABLE}/index/*
         - Effect: Allow
           Action:
             - s3:PutObject
@@ -60,6 +67,8 @@ provider:
             - sqs:SendMessage
           Resource:
             - { "Fn::GetAtt": [ ProcessingQueue, Arn ] }
+            - { "Fn::GetAtt": [ QuizQueue, Arn ] }
+            - { "Fn::GetAtt": [ WorkerQueue, Arn ] }
         - Effect: Allow
           Action:
             - sqs:ReceiveMessage
@@ -67,6 +76,8 @@ provider:
             - sqs:GetQueueAttributes
           Resource:
             - { "Fn::GetAtt": [ ProcessingQueue, Arn ] }
+            - { "Fn::GetAtt": [ QuizQueue, Arn ] }
+            - { "Fn::GetAtt": [ WorkerQueue, Arn ] }
 
 plugins:
   - serverless-esbuild
@@ -162,6 +173,46 @@ functions:
           arn:
             Fn::GetAtt: [ ProcessingQueue, Arn ]
           batchSize: 1
+          
+  # Quiz Generation Endpoints
+  quizGenerate:
+    handler: src/handlers/quiz/generate.handler
+    timeout: 30
+    memorySize: 256
+    events:
+      - httpApi:
+          path: /quiz/generate
+          method: POST
+          
+  quizStatus:
+    handler: src/handlers/quiz/status.handler
+    timeout: 30
+    memorySize: 256
+    events:
+      - httpApi:
+          path: /quiz/{id}
+          method: GET
+          
+  # Quiz Worker Processors (Production Only)
+  quizWorker:
+    handler: src/handlers/quiz/worker.handler
+    timeout: 300
+    memorySize: 512
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt: [ QuizQueue, Arn ]
+          batchSize: 1
+          
+  quizSubWorker:
+    handler: src/handlers/quiz/subWorker.handler
+    timeout: 180
+    memorySize: 1024
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt: [ WorkerQueue, Arn ]
+          batchSize: 1
 
 resources:
   Resources:    
@@ -186,6 +237,27 @@ resources:
               ProjectionType: ALL
         BillingMode: PAY_PER_REQUEST
         
+    QuizTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.QUIZ_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: userId-index
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        BillingMode: PAY_PER_REQUEST
+        
     ProcessingDLQ:
       Type: AWS::SQS::Queue
       Properties:
@@ -198,6 +270,38 @@ resources:
         VisibilityTimeout: 900
         RedrivePolicy:
           deadLetterTargetArn: { "Fn::GetAtt": [ ProcessingDLQ, Arn ] }
+          maxReceiveCount: 3
+
+    QuizDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${self:provider.stage}-quiz-dlq
+        MessageRetentionPeriod: 86400
+        
+    QuizQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${self:provider.stage}-quiz-generation
+        VisibilityTimeout: 300
+        MessageRetentionPeriod: 86400
+        RedrivePolicy:
+          deadLetterTargetArn: { "Fn::GetAtt": [ QuizDLQ, Arn ] }
+          maxReceiveCount: 3
+          
+    WorkerDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${self:provider.stage}-quiz-worker-dlq
+        MessageRetentionPeriod: 86400
+        
+    WorkerQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${self:provider.stage}-quiz-workers
+        VisibilityTimeout: 200
+        MessageRetentionPeriod: 86400
+        RedrivePolicy:
+          deadLetterTargetArn: { "Fn::GetAtt": [ WorkerDLQ, Arn ] }
           maxReceiveCount: 3
 
 package:

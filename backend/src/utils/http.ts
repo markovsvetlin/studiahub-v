@@ -2,7 +2,7 @@
  * HTTP utility functions for API Gateway responses and request parsing
  */
 
-import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
+import { APIGatewayProxyEventV2, APIGatewayProxyResultV2, APIGatewayProxyResult } from 'aws-lambda';
 
 /**
  * Creates a standardized error response for API Gateway
@@ -29,6 +29,25 @@ export function createSuccessResponse(data: any, statusCode: number = 200): APIG
     statusCode,
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ ok: true, ...data })
+  };
+}
+
+/**
+ * Creates a standardized response for API Gateway (used by quiz handlers)
+ * @param statusCode - HTTP status code
+ * @param data - Response data
+ * @returns Formatted API Gateway response
+ */
+export function createResponse(statusCode: number, data: any): APIGatewayProxyResult {
+  return {
+    statusCode,
+    headers: { 
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With'
+    },
+    body: JSON.stringify(data)
   };
 }
 

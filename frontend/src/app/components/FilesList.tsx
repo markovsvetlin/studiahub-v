@@ -19,6 +19,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils'
 import { FileListItem, FileListProps, SortField, SortDirection } from '@/types/file'
 import QuizDrawer from './QuizDrawer'
+import { generateAndWaitForQuiz } from '../services/quiz'
 
 function formatBytes(bytes: number): string {
   const sizes = ['B', 'KB', 'MB', 'GB']
@@ -293,9 +294,25 @@ export default function FilesList({
               </Button>
             }
             existingQuizNames={[]} // TODO: Pass actual existing quiz names if needed
-            onGenerateQuiz={(settings) => {
+            onGenerateQuiz={async (settings) => {
               console.log('Generating quiz with settings:', settings)
-              // TODO: Implement quiz generation logic
+              try {
+                const completedQuiz = await generateAndWaitForQuiz({
+                  mode: 'general', // Use general mode since it's working
+                  questionCount: settings.questions || 10,
+                  // Don't pass userId to use default namespace
+                  quizName: settings.quizName || 'My Quiz',
+                  topic: settings.topic || '',
+                  minutes: settings.minutes || 5,
+                  difficulty: settings.difficulty || 'medium'
+                })
+                
+                console.log('🎉 Quiz completed successfully!')
+                console.log('📋 Total questions:', completedQuiz.questions?.length)
+                console.log('📝 All questions:', completedQuiz.questions)
+              } catch (error) {
+                console.error('❌ Quiz generation failed:', error)
+              }
             }}
           />
         </div>
