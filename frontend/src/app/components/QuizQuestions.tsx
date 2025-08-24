@@ -18,7 +18,7 @@ import {
   Trophy,
   X
 } from 'lucide-react'
-import { type Question, type QuizStatus } from '../services/quiz'
+import {  type QuizStatus } from '../services/quiz'
 
 interface QuizQuestionsProps {
   open: boolean
@@ -123,7 +123,7 @@ export default function QuizQuestions({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-2xl lg:max-w-4xl xl:max-w-5xl p-0 overflow-hidden" side="right">
+      <SheetContent className="w-full sm:max-w-xl lg:max-w-xl xl:max-w-3xl p-0 overflow-hidden" side="right">
         <div className="flex flex-col h-full">
           {/* Header */}
           <SheetHeader className="p-6 border-b border-neutral-800 bg-neutral-900/50">
@@ -307,7 +307,7 @@ export default function QuizQuestions({
                     <p className="text-sm text-yellow-400">Good job! Keep studying! 📚</p>
                   )}
                   {score < 60 && (
-                    <p className="text-sm text-red-400">Keep practicing! You'll get there! 💪</p>
+                    <p className="text-sm text-red-400">Keep practicing! You&apos;ll get there! 💪</p>
                   )}
                 </div>
                 <Button 

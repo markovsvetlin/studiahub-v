@@ -238,14 +238,28 @@ resources:
             AttributeType: S
           - AttributeName: key
             AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: status
+            AttributeType: S
         KeySchema:
           - AttributeName: id
             KeyType: HASH
         GlobalSecondaryIndexes:
+          # Existing: Lookup file by S3 key
           - IndexName: key-index
             KeySchema:
               - AttributeName: key
                 KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+          # OPTIMAL: Direct query for user's files by status (no filtering needed!)
+          - IndexName: user-status-index
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+              - AttributeName: status
+                KeyType: RANGE
             Projection:
               ProjectionType: ALL
         BillingMode: PAY_PER_REQUEST
@@ -263,6 +277,7 @@ resources:
           - AttributeName: id
             KeyType: HASH
         GlobalSecondaryIndexes:
+          # Simple: User quizzes (already works fine)
           - IndexName: user-index
             KeySchema:
               - AttributeName: userId

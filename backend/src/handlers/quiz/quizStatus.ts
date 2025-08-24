@@ -62,7 +62,7 @@ export async function getQuizStatus(event: APIGatewayProxyEventV2): Promise<APIG
 }
 
 /**
- * List user's quizzes with pagination
+ * List user's quizzes - clean and simple
  */
 export async function getUserQuizzes(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
   try {
@@ -77,7 +77,6 @@ export async function getUserQuizzes(event: APIGatewayProxyEventV2): Promise<API
     const quizzes = await dbGetUserQuizzes(userId, limit)
     
     console.log(`📝 Found ${quizzes.length} quizzes for user ${userId}`)
-    console.log('First quiz sample:', quizzes[0])
     
     // Return complete quiz data including questions
     const summaries = quizzes.map(quiz => {

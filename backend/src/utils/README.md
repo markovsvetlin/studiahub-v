@@ -1,287 +1,371 @@
-# Utils - Database Operations & Shared Utilities
+# Utils Directory Documentation
 
-**Shared utilities** and database operations that support all backend functionality. These provide consistent patterns for database access, HTTP responses, and common operations.
+## Overview
+The utils directory contains shared utility functions, constants, and helper modules used across the StudiaHub-v2 backend. These utilities provide common functionality for HTTP responses, database operations, queue management, and application constants.
 
-## Utility Structure
+## Directory Structure
 
 ```
 utils/
-├── files/              # File-specific database operations
-│   ├── database.ts     # DynamoDB CRUD operations for files
-│   └── queue.ts        # SQS message handling
-├── constants.ts        # Shared configuration and constants
-└── http.ts            # HTTP response utilities
+├── constants.ts              # Application-wide constants and configuration
+├── http.ts                  # HTTP response formatting utilities
+├── sqs.ts                   # SQS queue management utilities
+├── files/                   # File-related utilities
+│   ├── database.ts          # File database operations
+│   └── queue.ts             # File processing queue management
+└── quiz/                    # Quiz-related utilities
+    ├── completionTracker.ts # Quiz generation progress tracking
+    └── database.ts          # Quiz database operations
 ```
 
-## Utility Details
+## Core Utils
 
-### 🗄️ files/database.ts
-**Purpose:** DynamoDB operations for file management  
-**Pattern:** Abstraction layer over DynamoDB Document Client
+### `constants.ts`
+**Purpose**: Centralized application constants and configuration values
+**Contents**:
+- **File Processing Constants**: 
+  - Max file size limits
+  - Supported file types
+  - Chunk size configurations
+- **API Configuration**:
+  - Timeout values
+  - Retry attempts
+  - Rate limiting parameters
+- **Database Table Names**: 
+  - DynamoDB table references
+  - Index names
+- **Queue Names**: 
+  - SQS queue identifiers
+  - Dead letter queue names
+- **Processing Constants**:
+  - Worker distribution parameters
+  - Progress tracking intervals
 
-#### File Record Interface
+### `http.ts` 
+**Purpose**: Standardized HTTP response formatting for API Gateway
+**Key Functions**:
+
+#### `successResponse(data: any, statusCode: number = 200): APIGatewayProxyResult`
+- **Purpose**: Format successful API responses
+- **Features**:
+  - Consistent JSON response structure
+  - CORS headers included
+  - Optional status code override
+- **Usage**: All successful API endpoints
+
+#### `errorResponse(message: string, statusCode: number = 500): APIGatewayProxyResult`
+- **Purpose**: Format error responses with consistent structure
+- **Features**:
+  - Standardized error message format
+  - Appropriate HTTP status codes
+  - CORS headers for error responses
+- **Usage**: Error handling across all handlers
+
+#### `corsHeaders`
+- **Purpose**: Standard CORS headers for cross-origin requests
+- **Configuration**:
+  - Allow-Origin: Configurable based on environment
+  - Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+  - Allow-Headers: Content-Type, Authorization
+- **Usage**: Applied to all HTTP responses
+
+### `sqs.ts`
+**Purpose**: SQS queue operations and message management
+**Key Functions**:
+
+#### `sendMessage(queueUrl: string, messageBody: any): Promise<void>`
+- **Purpose**: Send messages to SQS queues
+- **Features**:
+  - JSON serialization
+  - Error handling and retries
+  - Message attribute support
+- **Usage**: Async processing triggers
+
+#### `deleteMessage(queueUrl: string, receiptHandle: string): Promise<void>`
+- **Purpose**: Remove processed messages from queue
+- **Features**: Prevents message reprocessing
+- **Usage**: Handler completion cleanup
+
+#### `getQueueAttributes(queueUrl: string): Promise<any>`
+- **Purpose**: Monitor queue metrics
+- **Returns**: Queue depth, message counts, visibility timeout
+- **Usage**: Queue health monitoring
+
+## File Utils (`/files/`)
+
+### `database.ts`
+**Purpose**: File-related database operations and queries
+**Key Functions**:
+
+#### `createFileRecord(fileData: FileRecord): Promise<void>`
+- **Purpose**: Create new file entry in DynamoDB
+- **Features**:
+  - UUID generation for file IDs
+  - Timestamp management
+  - User association
+- **Usage**: File upload initialization
+
+#### `updateFileStatus(fileId: string, status: FileStatus, progress?: number): Promise<void>`
+- **Purpose**: Update file processing status
+- **Features**:
+  - Atomic updates
+  - Progress percentage tracking
+  - Error status handling
+- **Usage**: Processing pipeline status updates
+
+#### `getFilesByUser(userId: string): Promise<FileRecord[]>`
+- **Purpose**: Retrieve user's files with pagination
+- **Features**:
+  - User-scoped queries
+  - Pagination support
+  - Status filtering options
+- **Usage**: File listing endpoints
+
+#### `deleteFileRecord(fileId: string, userId: string): Promise<void>`
+- **Purpose**: Remove file record and cleanup
+- **Features**:
+  - User authorization validation
+  - Cascade deletion of related data
+  - Error handling for missing records
+- **Usage**: File deletion operations
+
+#### `toggleFileEnabled(fileId: string, userId: string, enabled: boolean): Promise<void>`
+- **Purpose**: Enable/disable files for quiz generation
+- **Features**:
+  - User authorization
+  - Optimistic updates
+  - Status validation
+- **Usage**: Quiz file selection management
+
+### `queue.ts`
+**Purpose**: File processing queue management
+**Key Functions**:
+
+#### `queueFileProcessing(fileId: string, s3Location: S3Location): Promise<void>`
+- **Purpose**: Queue files for async processing
+- **Features**:
+  - Message deduplication
+  - Delay options for batching
+  - Error handling and DLQ routing
+- **Usage**: Post-upload processing triggers
+
+#### `getQueueStatus(): Promise<QueueStatus>`
+- **Purpose**: Monitor file processing queue
+- **Returns**: Pending messages, processing rate, errors
+- **Usage**: System monitoring and scaling decisions
+
+## Quiz Utils (`/quiz/`)
+
+### `completionTracker.ts`
+**Purpose**: Track progress of parallel quiz generation workers
+**Key Functions**:
+
+#### `initializeTracker(quizId: string, totalQuestions: number): Promise<void>`
+- **Purpose**: Set up progress tracking for new quiz
+- **Process**:
+  1. Create tracker record in DynamoDB
+  2. Initialize progress counters
+  3. Set up worker coordination metadata
+- **Features**: Atomic initialization, conflict prevention
+
+#### `updateProgress(quizId: string, workerId: string, question: QuizQuestion): Promise<void>`
+- **Purpose**: Record individual worker completion
+- **Process**:
+  1. Validate worker assignment
+  2. Store generated question
+  3. Update completion counter
+  4. Check for overall completion
+- **Features**: Race condition prevention, duplicate detection
+
+#### `checkCompletion(quizId: string): Promise<boolean>`
+- **Purpose**: Verify all workers have completed
+- **Logic**:
+  1. Query completion tracker
+  2. Validate question count matches target
+  3. Verify all questions are valid
+- **Returns**: Boolean indicating completion status
+
+#### `getProgress(quizId: string): Promise<ProgressStatus>`
+- **Purpose**: Get current generation progress
+- **Returns**:
+  - Completion percentage
+  - Worker status
+  - Generated question count
+  - Error information
+- **Usage**: Progress polling endpoints
+
+#### `assembleQuiz(quizId: string): Promise<Quiz>`
+- **Purpose**: Combine worker results into final quiz
+- **Process**:
+  1. Retrieve all completed questions
+  2. Validate question format and content
+  3. Create final quiz structure
+  4. Clean up tracker resources
+- **Features**: Question validation, error recovery
+
+#### `cleanupTracker(quizId: string): Promise<void>`
+- **Purpose**: Remove tracking data after completion
+- **Features**: Resource cleanup, error handling
+- **Usage**: Post-generation cleanup
+
+### `database.ts`
+**Purpose**: Quiz-related database operations
+**Key Functions**:
+
+#### `createQuizRecord(quizData: QuizRecord): Promise<string>`
+- **Purpose**: Create new quiz entry
+- **Features**:
+  - UUID generation
+  - User association
+  - Metadata storage
+- **Returns**: Generated quiz ID
+
+#### `getQuizzesByUser(userId: string): Promise<QuizRecord[]>`
+- **Purpose**: Retrieve user's quizzes
+- **Features**:
+  - User-scoped queries
+  - Sorting by creation date
+  - Status filtering
+- **Usage**: Quiz listing endpoints
+
+#### `deleteQuizRecord(quizId: string, userId: string): Promise<void>`
+- **Purpose**: Remove quiz and associated data
+- **Features**:
+  - User authorization validation
+  - Cascade deletion
+  - Completion tracker cleanup
+- **Usage**: Quiz deletion operations
+
+#### `updateQuizStatus(quizId: string, status: QuizStatus): Promise<void>`
+- **Purpose**: Update quiz generation status
+- **Features**: Atomic status updates, progress tracking
+- **Usage**: Generation pipeline status management
+
+## Utility Patterns
+
+### 1. Error Handling Pattern
 ```typescript
-interface FileRecord {
-  id: string              // UUID primary key
-  key: string            // S3 object key (GSI)
-  status: 'uploading' | 'queued' | 'processing' | 'ready' | 'error'
-  progress: number       // Processing progress (0-100)
-  totalChunks: number    // Number of generated chunks
-  createdAt: string      // ISO timestamp
-  updatedAt?: string     // ISO timestamp
-  isEnabled?: boolean    // Context pool toggle
+export async function utilityFunction(params: any): Promise<Result> {
+  try {
+    // Validate input parameters
+    if (!params.required) {
+      throw new ValidationError('Required parameter missing')
+    }
+    
+    // Perform operation
+    const result = await performOperation(params)
+    return result
+  } catch (error) {
+    console.error(`Error in ${utilityFunction.name}:`, error)
+    throw new UtilityError(`Operation failed: ${error.message}`)
+  }
 }
 ```
 
-#### Core Functions
-
-**`createFileRecord()`** - Create new file entry
+### 2. Database Operation Pattern
 ```typescript
-export async function createFileRecord(key: string, status: FileRecord['status'] = 'uploading'): Promise<FileRecord>
-```
-- Generates UUID for new file
-- Sets default values (enabled: true, progress: 0)
-- Creates DynamoDB record atomically
-
-**`updateFileProgress()`** - Update processing status
-```typescript
-export async function updateFileProgress(key: string, progress: number, status?: FileRecord['status']): Promise<void>
-```
-- Finds file by S3 key using GSI
-- Updates progress and status atomically
-- Handles missing files gracefully
-
-**`updateFileById()`** - Direct update by ID
-```typescript
-export async function updateFileById(fileId: string, data: Partial<FileRecord>): Promise<void>
-```
-- Updates multiple fields atomically
-- Sets updatedAt timestamp automatically
-- Used for bulk updates
-
-**`findFileByKey()`** - Lookup by S3 key
-```typescript
-export async function findFileByKey(key: string): Promise<FileRecord | null>
-```
-- Uses GSI for efficient key-based queries
-- Returns null if not found
-- Critical for upload confirmation flow
-
-### 📨 files/queue.ts
-**Purpose:** SQS message operations for async processing  
-**Pattern:** Environment-aware queue handling
-
-```typescript
-export async function triggerFileProcessing(key: string): Promise<void>
-```
-
-**Logic:**
-- **Local Development:** Direct function call for immediate processing
-- **Production:** SQS message for scalable async processing
-- **Message Format:** `{bucket: S3_BUCKET, key: fileKey}`
-
-**Error Handling:**
-- Logs warnings if queue URL not configured
-- Graceful degradation in local development
-- Non-blocking failures (processing continues)
-
-### 🔧 constants.ts  
-**Purpose:** Shared configuration and validation rules  
-
-#### File Upload Constants
-```typescript
-export const MAX_FILE_SIZE_MB = 50;
-export const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
-
-export const ALLOWED_CONTENT_TYPES = new Set([
-  'application/pdf',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // DOCX
-  'application/msword',
-  'image/png',
-  'image/jpeg', 
-  'image/webp',
-  'image/gif'
-]);
-```
-
-#### Environment Configuration
-```typescript
-export const AWS_REGION = process.env.AWS_REGION || 'us-east-1';
-export const S3_BUCKET = process.env.S3_BUCKET || '';
-export const FILES_TABLE = process.env.FILES_TABLE!;
-export const ITEMS_TABLE = process.env.ITEMS_TABLE!;
-export const PROCESSING_QUEUE_URL = process.env.PROCESSING_QUEUE_URL;
-```
-
-**Usage Pattern:**
-- Import once, use everywhere
-- Environment variable defaults
-- Type-safe access to configuration
-
-### 🌐 http.ts
-**Purpose:** Standardized HTTP response utilities  
-**Pattern:** Consistent API responses across all handlers
-
-#### Success Response
-```typescript
-export function createSuccessResponse(data: any, statusCode: number = 200): APIGatewayProxyResultV2 {
-  return {
-    statusCode,
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ ok: true, ...data })
-  };
-}
-```
-
-#### Error Response
-```typescript
-export function createErrorResponse(statusCode: number, error: string): APIGatewayProxyResultV2 {
-  return {
-    statusCode,
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ ok: false, error })
-  };
-}
-```
-
-**Response Format:**
-- **Success:** `{ok: true, ...data}`
-- **Error:** `{ok: false, error: "message"}`
-- **Headers:** Always includes JSON content-type
-- **CORS:** Handled at API Gateway level
-
-## Database Connection (../db.ts)
-
-**Purpose:** Global DynamoDB client with local development support
-
-```typescript
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
-
-let dynamoClient: DynamoDBDocumentClient;
-
-// Global singleton pattern
-if (!global.__dynamoClient) {
-  const client = new DynamoDBClient({
-    region: process.env.AWS_REGION || 'us-east-1',
-    // Local development configuration
-    ...(process.env.IS_OFFLINE && {
-      endpoint: 'http://localhost:8000',
-      credentials: {
-        accessKeyId: 'fake',
-        secretAccessKey: 'fake'
-      }
-    })
-  });
+async function databaseOperation(params: DbParams): Promise<Result> {
+  const dynamodb = getDynamoDBClient()
   
-  global.__dynamoClient = DynamoDBDocumentClient.from(client);
-}
-
-export { dynamoClient as db };
-```
-
-**Features:**
-- **Singleton:** One client instance across all Lambda invocations
-- **Local Development:** Automatically connects to local DynamoDB
-- **Production:** Uses IAM roles and AWS credentials
-- **Type Safety:** Full TypeScript support with Document Client
-
-## Usage Patterns
-
-### Error Handling Pattern
-```typescript
-try {
-  const file = await createFileRecord(key, 'uploading');
-  return createSuccessResponse({ fileId: file.id });
-} catch (error) {
-  console.error('Failed to create file:', error);
-  return createErrorResponse(500, (error as Error).message);
+  const dbParams = {
+    TableName: TABLE_NAME,
+    Key: { id: params.id },
+    // Additional parameters
+  }
+  
+  try {
+    const result = await dynamodb.get(dbParams).promise()
+    return result.Item
+  } catch (error) {
+    console.error('Database operation failed:', error)
+    throw new DatabaseError(`Failed to ${operation}: ${error.message}`)
+  }
 }
 ```
 
-### Database Operation Pattern
+### 3. Queue Management Pattern
 ```typescript
-// Always use utility functions, not direct DynamoDB calls
-const file = await findFileByKey(s3Key);
-if (!file) {
-  return createErrorResponse(404, 'File not found');
+async function queueOperation(params: QueueParams): Promise<void> {
+  const sqs = getSQSClient()
+  
+  const messageParams = {
+    QueueUrl: QUEUE_URL,
+    MessageBody: JSON.stringify(params.message),
+    // Additional attributes
+  }
+  
+  try {
+    await sqs.sendMessage(messageParams).promise()
+    console.log('Message queued successfully')
+  } catch (error) {
+    console.error('Queue operation failed:', error)
+    throw new QueueError(`Failed to queue message: ${error.message}`)
+  }
+}
+```
+
+## Configuration Management
+
+### Environment Variables
+- Database table names and indexes
+- Queue URLs and configurations
+- API endpoints and timeouts
+- Feature flags and limits
+
+### Constants Organization
+```typescript
+export const FILE_CONSTANTS = {
+  MAX_SIZE: 50 * 1024 * 1024, // 50MB
+  SUPPORTED_TYPES: ['pdf', 'docx', 'png', 'jpg', 'jpeg'],
+  CHUNK_SIZE: 200 // words
 }
 
-await updateFileById(file.id, { status: 'processing', progress: 50 });
-```
-
-### Environment Configuration Pattern
-```typescript
-import { S3_BUCKET, FILES_TABLE, ALLOWED_CONTENT_TYPES } from '../constants';
-
-// Validate against allowed types
-if (!ALLOWED_CONTENT_TYPES.has(contentType)) {
-  return createErrorResponse(400, 'Unsupported file type');
+export const QUIZ_CONSTANTS = {
+  MIN_QUESTIONS: 1,
+  MAX_QUESTIONS: 50,
+  DEFAULT_DIFFICULTY: 'medium',
+  WORKER_TIMEOUT: 300000 // 5 minutes
 }
 ```
 
-## Database Schema & Indexes
+## Performance Considerations
 
-### Files Table Structure
-- **Primary Key:** `id` (String Hash)
-- **Global Secondary Index:** `key-index` on `key` field
-- **Billing Mode:** Pay-per-request (auto-scaling)
-- **Attributes:** All file metadata and processing state
+### 1. Database Optimizations
+- Batch operations where possible
+- Efficient query patterns
+- Index usage optimization
+- Connection pooling (singleton pattern)
 
-### Access Patterns
-1. **Create File:** Direct write with generated UUID
-2. **Find by Key:** Query GSI for S3 key lookups
-3. **Update Progress:** Update by ID with atomic operations
-4. **List Files:** Scan with filter for ready files
-5. **Delete File:** Delete by ID after cleanup operations
+### 2. Queue Optimizations
+- Message batching
+- Visibility timeout tuning
+- Dead letter queue configuration
+- Retry policy optimization
 
-## Local Development
+### 3. Memory Management
+- Efficient object creation and disposal
+- Stream processing for large data
+- Buffer management
+- Garbage collection considerations
 
-### DynamoDB Local Setup
-```bash
-# Start local DynamoDB
-docker-compose up -d
+## Testing and Debugging
 
-# Initialize tables with proper schema
-npm run db:init:local
+### 1. Logging Standards
+- Consistent log levels (error, warn, info, debug)
+- Structured logging with context
+- Performance timing logs
+- Error stack trace preservation
 
-# Access admin UI
-npm run db:admin  # http://localhost:8001
-```
+### 2. Validation Helpers
+- Input parameter validation
+- Type checking utilities
+- Data format validation
+- Business rule enforcement
 
-### Table Initialization Script
-Location: `backend/scripts/init-dynamo.js`
-- Creates tables with correct schema
-- Sets up GSI indexes
-- Handles local and remote environments
-- Respects serverless naming conventions
+### 3. Monitoring Integration
+- CloudWatch metrics
+- Error tracking
+- Performance monitoring
+- Health check utilities
 
-## Testing Utilities
-
-### Mock Database Operations
-```typescript
-// Test pattern for database utilities
-const mockFile: FileRecord = {
-  id: 'test-id',
-  key: 'uploads/test-file.pdf',
-  status: 'ready',
-  progress: 100,
-  totalChunks: 5,
-  createdAt: new Date().toISOString(),
-  isEnabled: true
-};
-```
-
-### HTTP Response Testing
-```typescript
-// Test success response format
-const response = createSuccessResponse({ fileId: 'test' });
-expect(JSON.parse(response.body)).toEqual({
-  ok: true,
-  fileId: 'test'
-});
-```
-
----
-
-*These utilities provide the foundation for all backend operations with consistent patterns and error handling.*
+This utilities architecture provides a solid foundation for shared functionality across the StudiaHub-v2 backend, ensuring consistency, reliability, and maintainability in common operations.

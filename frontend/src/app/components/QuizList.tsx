@@ -6,7 +6,6 @@ import {
   Loader2,
   Brain,
   PlayCircle,
-  HelpCircle,
   ChevronDown,
   ChevronUp
 } from 'lucide-react'
@@ -99,7 +98,7 @@ function QuizCard({ quiz, onDelete, onRetake }: QuizCardProps) {
 
 
       {/* Retake Button */}
-      <div className="flex-shrink-0">
+      <div >
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -108,7 +107,7 @@ function QuizCard({ quiz, onDelete, onRetake }: QuizCardProps) {
               onClick={() => onRetake(quiz.quizId)}
               className="text-neutral-400 hover:text-indigo-400 hover:bg-indigo-500/10 p-2"
             >
-              <PlayCircle className="w-4 h-4" />
+              <PlayCircle  style={{ width: '20px', height: '20px' }} className="w-20 h-20" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>
@@ -131,7 +130,7 @@ function QuizCard({ quiz, onDelete, onRetake }: QuizCardProps) {
               {isDeleting ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                <Trash2 className="w-4 h-4" />
+                <Trash2 style={{ width: '20px', height: '20px' }}  className="w-4 h-4" />
               )}
             </Button>
           </TooltipTrigger>
@@ -186,9 +185,9 @@ export default function QuizList({
             className="text-neutral-400 hover:text-neutral-200 p-2"
           >
             {isExpanded ? (
-              <ChevronUp className="w-4 h-4" />
+              <ChevronUp style={{ width: '20px', height: '20px' }} />
             ) : (
-              <ChevronDown className="w-4 h-4" />
+              <ChevronDown style={{ width: '20px', height: '20px' }} />
             )}
           </Button>
         </div>

@@ -180,9 +180,9 @@ function FileRow({ file, onToggleEnabled, onDelete }: FileRowProps) {
               className="text-neutral-400 hover:text-red-400 hover:bg-red-500/10 p-2"
             >
               {isDeleting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-6 h-6 animate-spin" />
               ) : (
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-6 h-6" />
               )}
             </Button>
           </TooltipTrigger>

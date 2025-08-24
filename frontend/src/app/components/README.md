@@ -1,363 +1,410 @@
-# UI Components - Interface & User Interactions
+# Components Directory Documentation
 
-**React components** that provide the user interface for document upload, management, and knowledge base interaction.
+## Overview
+The components directory contains all React components for the StudiaHub-v2 frontend. Components are organized by feature and follow a modular architecture pattern with clear separation of concerns.
 
-**Note:** The main dashboard functionality (file upload and management) is located in `/dashboard/page.tsx`, while the landing page with marketing content is in `/page.tsx`.
-
-## Component Structure
+## Directory Structure
 
 ```
 components/
-├── FilesList.tsx       # File management interface
-├── ItemDemo.tsx        # API testing component  
-└── UploadDropzone/     # File upload system
-    ├── index.tsx       # Main upload component
-    ├── DropArea.tsx    # Drag & drop interface
-    ├── FileList.tsx    # Upload progress list
-    └── utils.ts        # Upload utilities & API calls
+├── FileUploadDemo.tsx       # Main file upload interface
+├── FilesList.tsx           # File management and display (430+ lines)
+├── QuizDrawer.tsx          # Interactive quiz taking interface
+├── QuizList.tsx           # Quiz listing and management
+├── QuizQuestions.tsx       # Individual question rendering
+├── UploadDropzone/         # File upload components
+│   ├── index.tsx          # Main dropzone orchestrator
+│   ├── DropArea.tsx       # Drag-and-drop zone
+│   ├── FileList.tsx       # Upload file display
+│   └── utils.ts           # Upload utility functions
+└── auth/                   # Authentication components (if needed)
 ```
 
-## Component Details
+## Core Components
 
-### 📋 FilesList.tsx
-**Purpose:** Main file management interface with sorting, toggling, and deletion
+### `FileUploadDemo.tsx`
+**Purpose**: Main file upload interface for the dashboard
+**Features**:
+- Drag-and-drop file upload
+- Progress tracking for file processing
+- Real-time status updates
+- Error handling and user feedback
 
-#### Key Features
-- **Sortable Columns:** Name, date, size with visual indicators
-- **Context Pool Toggle:** Enable/disable files for AI processing
-- **File Deletion:** Complete removal from all systems
-- **Real-time Status:** Live updates during operations
-- **Responsive Design:** Mobile-optimized layout
+**Key Functions**:
+- `handleFileUpload()`: Process file selection and initiate upload
+- `trackUploadProgress()`: Monitor file processing status
+- `validateFile()`: Check file type and size constraints
 
-#### Component Architecture
+**State Management**:
+- Upload progress tracking
+- File validation states
+- Error and success feedback
+
+**Integration**:
+- Uses UploadDropzone components for UI
+- Integrates with backend file processing APIs
+- Real-time status polling
+
+### `FilesList.tsx` (⚠️ Large Component - 430+ lines)
+**Purpose**: Display and manage user's uploaded files
+**Features**:
+- File listing with metadata (name, size, upload date, status)
+- Toggle file inclusion in quiz generation
+- Delete files functionality
+- Real-time status updates
+- Responsive table design
+
+**Key Functions**:
+- `fetchFiles()`: Load user's files from API
+- `toggleFileStatus()`: Enable/disable files for quiz generation
+- `deleteFile()`: Remove files and associated data
+- `handleFileSelection()`: Manage file selection for quizzes
+- `refreshFileStatus()`: Poll for processing updates
+
+**State Management**:
+- Files list state with optimistic updates
+- Loading states for various operations
+- Error handling for API failures
+- File selection state for quiz generation
+
+**UI Components**:
+- Responsive data table
+- Status indicators (badges)
+- Action buttons (delete, toggle)
+- Progress indicators
+- Empty states
+
+**Areas for Refactoring**:
+- Component is too large (430+ lines)
+- Multiple responsibilities (display, actions, state management)
+- Could be split into smaller, focused components
+
+### `QuizList.tsx`
+**Purpose**: Display user's generated quizzes
+**Features**:
+- Quiz metadata display (title, question count, creation date)
+- Quiz selection and launching
+- Delete quiz functionality
+- Empty state handling
+
+**Key Functions**:
+- `fetchQuizzes()`: Load user's quiz list
+- `deleteQuiz()`: Remove quiz with confirmation
+- `launchQuiz()`: Open quiz in drawer interface
+- `handleQuizSelection()`: Quiz interaction management
+
+**State Management**:
+- Quiz list with CRUD operations
+- Loading and error states
+- Selected quiz state
+
+**Integration**:
+- Communicates with QuizDrawer for quiz taking
+- Backend API integration for quiz management
+
+### `QuizDrawer.tsx`
+**Purpose**: Interactive quiz taking interface
+**Features**:
+- Slide-out drawer for quiz interaction
+- Question progression and navigation
+- Answer selection and validation
+- Results display and scoring
+- Progress tracking
+
+**Key Functions**:
+- `openQuiz()`: Initialize quiz session
+- `nextQuestion()`: Navigate to next question
+- `submitAnswer()`: Process user's answer selection
+- `calculateScore()`: Compute final quiz results
+- `resetQuiz()`: Clear quiz state
+
+**State Management**:
+- Current question index
+- User answers and scoring
+- Quiz completion status
+- Results and feedback
+
+**UI Features**:
+- Animated transitions between questions
+- Progress bar visualization
+- Score feedback
+- Results summary
+
+### `QuizQuestions.tsx`
+**Purpose**: Individual question display and interaction
+**Features**:
+- Multiple choice question rendering
+- Answer selection handling
+- Question navigation controls
+- Visual feedback for selected answers
+
+**Key Functions**:
+- `renderQuestion()`: Display question content
+- `handleAnswerSelection()`: Process answer choice
+- `validateAnswer()`: Check answer correctness
+- `renderAnswerOptions()`: Display multiple choice options
+
+**Props Interface**:
 ```typescript
-export default function FilesList({
-  files,
-  onToggleEnabled,
-  onDeleteFile,
-  isLoading,
-  sortField,
-  sortDirection,
-  onSort
-}: FileListProps)
-```
-
-#### Sub-components
-**`FileRow`** - Individual file display with actions
-```typescript
-function FileRow({ file, onToggleEnabled, onDelete }: FileRowProps) {
-  const [isDeleting, setIsDeleting] = useState(false)
-  
-  return (
-    <div className="flex items-center gap-4 p-4 rounded-lg border">
-      {/* File icon & name */}
-      {/* Context pool toggle */}  
-      {/* Delete button with loading state */}
-    </div>
-  )
+interface QuizQuestionProps {
+  question: Question
+  questionIndex: number
+  totalQuestions: number
+  selectedAnswer?: string
+  onAnswerSelect: (answer: string) => void
+  onNext: () => void
+  onPrevious: () => void
+  showResults?: boolean
 }
 ```
 
-**`SortButton`** - Column header sorting controls
+## Upload Components (`/UploadDropzone/`)
+
+### `index.tsx` - Main Dropzone Component
+**Purpose**: Orchestrates file upload UI components
+**Features**:
+- Combines DropArea and FileList components
+- Manages upload state and coordination
+- Handles file validation and processing
+
+**Key Functions**:
+- `handleFilesSelected()`: Process file selection
+- `validateFiles()`: Check file constraints
+- `initiateUpload()`: Start upload process
+- `trackProgress()`: Monitor upload progress
+
+**Integration**:
+- Coordinates between DropArea and FileList
+- Communicates with parent components
+- Manages overall upload workflow
+
+### `DropArea.tsx` - Drag-and-Drop Zone
+**Purpose**: Visual drop zone for file selection
+**Features**:
+- Drag-and-drop interface with visual feedback
+- File type validation
+- Accessibility support
+- Hover states and animations
+
+**Key Functions**:
+- `handleDragOver()`: Visual feedback during drag
+- `handleDrop()`: Process dropped files
+- `handleClick()`: Open file browser
+- `validateDroppedFiles()`: Check file constraints
+
+**State Management**:
+- Drag state (dragOver, dragEnter, dragLeave)
+- File validation states
+- Error feedback
+
+**Accessibility Features**:
+- Keyboard navigation support
+- Screen reader compatibility
+- ARIA labels and descriptions
+
+### `FileList.tsx` - Upload File Display
+**Purpose**: Show files during upload process
+**Features**:
+- File preview with type-specific icons
+- Upload progress indicators
+- Remove files before upload
+- File metadata display
+
+**Key Functions**:
+- `renderFileItem()`: Display individual file
+- `showProgress()`: Upload progress visualization
+- `removeFile()`: Remove file from upload queue
+- `formatFileSize()`: Human-readable file sizes
+
+**UI Elements**:
+- File icons based on type
+- Progress bars for upload status
+- Remove buttons for each file
+- File size and type information
+
+### `utils.ts` - Upload Utilities
+**Purpose**: Shared utility functions for upload components
+**Functions**:
+
+#### `formatFileSize(bytes: number): string`
+- Convert bytes to human-readable format (KB, MB, GB)
+- Handles edge cases and rounding
+
+#### `getFileIcon(filename: string): string`
+- Return appropriate icon based on file extension
+- Supports PDF, DOCX, image files
+- Default icon for unknown types
+
+#### `validateFile(file: File): ValidationResult`
+- Check file size against limits
+- Validate file type against allowed formats
+- Return validation status with error messages
+
+#### `generateFilePreview(file: File): string | null`
+- Generate preview URLs for image files
+- Handle unsupported file types gracefully
+
+## Component Interaction Patterns
+
+### 1. Parent-Child Communication
 ```typescript
-function SortButton({ field, currentField, direction, onSort, children }) {
-  return (
-    <Button onClick={() => onSort(field)}>
-      {children}
-      {isActive && <ChevronIcon />}
-    </Button>
-  )
-}
+// Parent passes data and callbacks to children
+<FilesList
+  files={files}
+  onFileToggle={handleFileToggle}
+  onFileDelete={handleFileDelete}
+  isLoading={isLoading}
+/>
 ```
 
-#### State Management
-- **Internal Sorting:** Manages sort field and direction when no external sort provided
-- **File Stats:** Calculates total files, active files, total size
-- **Loading States:** Individual file operations with loading indicators
-
-#### Styling Patterns
-- **Dark Theme:** Neutral-900 backgrounds with hover states
-- **Status Indicators:** Color-coded file states (enabled/disabled)
-- **Interactive Elements:** Hover effects and transition animations
-- **Mobile Responsive:** Stacked layout on small screens
-
-### 📤 UploadDropzone/
-**Purpose:** Complete file upload system with drag & drop, progress tracking, and batch processing
-
-#### Main Component (index.tsx)
+### 2. State Management Pattern
 ```typescript
-export default function UploadDropzone({
-  onFilesAdded,
-  onChange,
-  onUploadComplete,
-  accept,
-  maxTotalBytes,
-  caption
-}: UploadDropzoneProps)
-```
+// Custom hooks encapsulate complex state logic
+const { files, loading, error, deleteFile, toggleFile } = useFiles()
 
-**State Management:**
-```typescript
-const [isDragging, setIsDragging] = useState(false)
-const [selectedFiles, setSelectedFiles] = useState<File[]>([])
-const [isSubmitting, setIsSubmitting] = useState(false)
-const [fileProgressByKey, setFileProgressByKey] = useState<Record<string, ProgressState>>({})
-```
-
-**Key Features:**
-- **File Validation:** Type and size checking
-- **Deduplication:** Prevents duplicate file selection
-- **Progress Tracking:** Real-time upload and processing status
-- **Error Handling:** User-friendly error messages
-- **Batch Processing:** Multiple files with concurrent uploads
-
-#### Sub-components
-
-**`DropArea.tsx`** - Drag & drop interface
-```typescript
-export function DropArea({
-  isDragging,
-  setIsDragging,
-  onFiles,
-  onOpenPicker,
-  caption,
-  selectedCount,
-  totalBytes,
-  limitMB
-}) {
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }
-  
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-    onFiles(e.dataTransfer.files)
-  }
-}
-```
-
-**Features:**
-- **Visual Feedback:** Border and background changes during drag
-- **File Drop Handling:** Processes dropped files
-- **Click to Browse:** Alternative file selection method
-- **Status Display:** Shows selected file count and total size
-
-**`FileList.tsx`** - Upload progress display
-```typescript
-export function FileList({
-  files,
-  makeKey,
-  formatBytes,
-  progressMap,
-  onRemove
-}) {
-  return (
-    <div className="space-y-2">
-      {files.map(file => (
-        <FileItem key={makeKey(file)} file={file} progress={progressMap[makeKey(file)]} />
-      ))}
-    </div>
-  )
-}
-```
-
-**Features:**
-- **Progress Bars:** Visual upload and processing progress
-- **Status Indicators:** Different states (idle, processing, done, error)
-- **File Removal:** Remove files before upload
-- **File Metadata:** Size, type, and name display
-
-#### Upload Process Flow
-
-**`utils.ts`** - Upload orchestration and API integration
-```typescript
-export async function uploadToBackend(
-  files: File[],
-  updateProgress: (key: string, progress: number, status?: FileStatus) => void,
-  onFileDone?: (localKey: string) => void
+// Components focus on UI rendering
+return (
+  <div>
+    {loading ? <LoadingSpinner /> : <FileTable files={files} />}
+    {error && <ErrorMessage message={error} />}
+  </div>
 )
 ```
 
-**Upload Steps:**
-1. **Generate Presigned URL** (5% progress)
-2. **Direct S3 Upload** (20% progress)  
-3. **Confirm Upload** (30% progress)
-4. **Start Status Polling** (30-100% progress)
-
-**Status Polling:**
+### 3. Event Handling Pattern
 ```typescript
-async function pollFileStatus(
-  baseUrl: string,
-  backendKey: string,
-  localKey: string,
-  updateProgress: Function
-) {
-  // Poll backend every 800ms for processing status
-  // Update progress bar in real-time  
-  // Complete when status = 'ready' or progress = 100
-}
-```
-
-### 🧪 ItemDemo.tsx
-**Purpose:** API testing and demonstration component
-
-```typescript
-export default function ItemDemo() {
-  const [creating, setCreating] = useState(false)
-  const [result, setResult] = useState(null)
-  
-  const createItem = async () => {
-    const res = await fetch(`${base}/items`, { 
-      method: 'POST',
-      body: JSON.stringify({ name: 'demo' })
-    })
-    setResult(await res.json())
-  }
-}
-```
-
-**Features:**
-- **API Testing:** Create and fetch items for backend validation
-- **Response Display:** Shows API responses in formatted JSON
-- **Loading States:** Button states during API calls
-- **Error Handling:** Displays API errors to developers
-
-## Utility Functions
-
-### File Type Detection
-```typescript
-function getFileIcon(contentType: string, className?: string) {
-  const isImage = contentType.startsWith('image/')
-  return isImage 
-    ? <ImageIcon className={cn("text-blue-400", className)} />
-    : <FileText className={cn("text-emerald-400", className)} />
-}
-```
-
-### Date Formatting
-```typescript
-function formatDate(dateString: string): string {
-  const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60)
-  
-  if (diffInHours < 1) return `${Math.floor(diffInHours * 60)}m ago`
-  if (diffInHours < 24) return `${Math.floor(diffInHours)}h ago`
-  if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`
-  return date.toLocaleDateString()
-}
-```
-
-### File Size Formatting  
-```typescript
-function formatBytes(bytes: number): string {
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  if (bytes === 0) return '0 B'
-  const i = Math.floor(Math.log(bytes) / Math.log(1024))
-  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`
-}
-```
-
-## Component Patterns
-
-### Optimistic Updates
-```typescript
-const toggleFileEnabled = async (fileId: string, enabled: boolean) => {
-  // Immediate UI update
-  setFiles(prev => prev.map(file => 
-    file.id === fileId ? { ...file, isEnabled: enabled } : file
-  ))
+// Optimistic updates with error recovery
+const handleDelete = async (fileId: string) => {
+  // Optimistic update
+  setFiles(files => files.filter(f => f.id !== fileId))
   
   try {
-    await updateAPI(fileId, enabled)
+    await deleteFile(fileId)
+    // Success - no additional action needed
   } catch (error) {
-    // Rollback on error
-    setFiles(prev => prev.map(file => 
-      file.id === fileId ? { ...file, isEnabled: !enabled } : file
-    ))
+    // Revert optimistic update
+    setFiles(originalFiles)
+    showError('Delete failed')
   }
 }
 ```
 
-### Loading States
+## Styling Approach
+
+### 1. Tailwind CSS Classes
 ```typescript
-const [isDeleting, setIsDeleting] = useState(false)
-
-const handleDelete = async () => {
-  setIsDeleting(true)
-  try {
-    await onDelete(file.id)
-  } finally {
-    setIsDeleting(false)
-  }
-}
-
-// UI reflects loading state
-{isDeleting ? (
-  <Loader2 className="w-4 h-4 animate-spin" />
-) : (
-  <Trash2 className="w-4 h-4" />
-)}
+// Consistent styling patterns
+const buttonClasses = "px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+const cardClasses = "bg-white dark:bg-gray-800 rounded-lg shadow-md p-6"
 ```
 
-### Error Boundaries
+### 2. Conditional Styling
 ```typescript
-if (error) {
-  return (
-    <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">
-      Error loading files: {error}
-    </div>
-  )
+// Dynamic classes based on state
+const statusClasses = {
+  processing: "bg-yellow-100 text-yellow-800",
+  completed: "bg-green-100 text-green-800", 
+  error: "bg-red-100 text-red-800"
 }
 ```
 
-## Design System Integration
-
-### Color Scheme
-- **Primary:** Indigo-400 for interactive elements
-- **Success:** Emerald-400 for positive actions
-- **Warning:** Yellow-400 for caution states
-- **Error:** Red-400 for destructive actions
-- **Neutral:** Gray scale for backgrounds and text
-
-### Icon Usage
+### 3. Responsive Design
 ```typescript
-import { 
-  FileText,     // Documents
-  Image,        // Images  
-  Database,     // Context pool
-  Trash2,       // Delete actions
-  Loader2,      // Loading states
-  Calendar,     // Timestamps
-  HardDrive     // Storage
-} from 'lucide-react'
+// Mobile-first responsive patterns
+className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
 ```
 
-### Responsive Breakpoints
-- **Mobile:** Stack elements vertically
-- **Tablet:** Reduce spacing and font sizes
-- **Desktop:** Full feature layout with hover states
+## Performance Optimizations
+
+### 1. React.memo Usage
+```typescript
+// Prevent unnecessary re-renders
+const FileItem = React.memo(({ file, onToggle, onDelete }) => {
+  // Component implementation
+})
+```
+
+### 2. Callback Memoization
+```typescript
+// Stable callback references
+const handleFileToggle = useCallback((fileId: string) => {
+  toggleFile(fileId)
+}, [toggleFile])
+```
+
+### 3. Lazy Loading
+```typescript
+// Dynamic imports for large components
+const QuizDrawer = lazy(() => import('./QuizDrawer'))
+```
+
+## Error Handling
+
+### 1. Error Boundaries
+```typescript
+// Graceful error recovery
+<ErrorBoundary fallback={<ErrorFallback />}>
+  <FilesList />
+</ErrorBoundary>
+```
+
+### 2. User Feedback
+```typescript
+// Toast notifications for operations
+const { toast } = useToast()
+
+const handleError = (error: string) => {
+  toast({
+    title: "Error",
+    description: error,
+    variant: "destructive"
+  })
+}
+```
 
 ## Accessibility Features
 
-### Keyboard Navigation
-- **Tab Order:** Logical focus progression
-- **Enter/Space:** Activate buttons and toggles
-- **Arrow Keys:** Navigate sortable columns
-- **Escape:** Cancel drag operations
+### 1. ARIA Labels
+```typescript
+// Screen reader support
+<button
+  aria-label={`Delete ${file.name}`}
+  onClick={() => onDelete(file.id)}
+>
+  <TrashIcon />
+</button>
+```
 
-### Screen Reader Support
-- **Aria Labels:** Descriptive button and input labels
-- **Live Regions:** Status updates announced
-- **Semantic HTML:** Proper heading hierarchy
-- **Alt Text:** Image and icon descriptions
+### 2. Keyboard Navigation
+```typescript
+// Keyboard event handling
+const handleKeyDown = (event: KeyboardEvent) => {
+  if (event.key === 'Enter' || event.key === ' ') {
+    handleClick()
+  }
+}
+```
 
-### Visual Indicators
-- **Focus Rings:** Visible focus states for keyboard users
-- **Color Contrast:** WCAG AA compliant color ratios
-- **Motion Reduction:** Respect `prefers-reduced-motion`
-- **High Contrast:** Enhanced visibility options
+## Areas for Improvement
 
----
+### 1. Component Size Reduction
+**Problem**: FilesList.tsx is 430+ lines
+**Solution**: Split into smaller components:
+- `FilesHeader` - Table header and actions
+- `FilesTable` - Data table container
+- `FileRow` - Individual file row
+- `FileActions` - Action buttons per file
 
-*These components create an intuitive and accessible interface for the AI document processing platform.*
+### 2. State Management Optimization
+**Problem**: Props drilling in some components
+**Solution**: Consider React Context for shared state
+
+### 3. Performance Enhancements
+**Problem**: Large file lists may cause performance issues
+**Solution**: Implement virtual scrolling or pagination
+
+### 4. Testing Infrastructure
+**Problem**: Limited component testing
+**Solution**: Add comprehensive unit and integration tests
+
+This component architecture provides a solid foundation for the StudiaHub-v2 user interface, with clear separation of concerns and reusable patterns. The main focus for improvement should be breaking down large components and optimizing state management patterns.

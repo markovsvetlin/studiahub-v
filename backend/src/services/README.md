@@ -1,19 +1,32 @@
-# Services - File Processing & AI Integration
+# Services Directory Documentation
 
-**Core business logic** for transforming uploaded documents into searchable AI embeddings. This is the heart of the document processing pipeline.
+## Overview
+The services directory contains the core business logic and external service integrations for StudiaHub-v2. Services are organized by domain (files and quiz) and provide reusable functionality for handlers.
 
-## Service Structure
+## Architecture Pattern
+Services follow a modular architecture pattern where each service is responsible for a specific domain or external integration:
+- **Domain Services**: Business logic for files and quiz operations
+- **Integration Services**: External API wrappers (OpenAI, Pinecone, AWS)
+- **Utility Services**: Common functionality shared across domains
+
+## File Processing Services (`/files/`)
+
+### Service Structure
 
 ```
 services/
-└── files/                    # Document processing services
-    ├── textExtraction.ts    # Multi-format text extraction router
-    ├── pdf.ts              # PDF text parsing
-    ├── docx.ts             # Word document processing  
-    ├── textract.ts         # AWS OCR for images
-    ├── chunking.ts         # Semantic text chunking
-    ├── embeddings.ts       # OpenAI embedding generation
-    └── pinecone.ts         # Vector database operations
+├── files/                    # Document processing services
+│   ├── textExtraction.ts    # Multi-format text extraction router
+│   ├── pdf.ts              # PDF text parsing
+│   ├── docx.ts             # Word document processing  
+│   ├── textract.ts         # AWS OCR for images
+│   ├── chunking.ts         # Semantic text chunking
+│   ├── embeddings.ts       # OpenAI embedding generation
+│   └── pinecone.ts         # Vector database operations
+└── quiz/                     # Quiz generation services
+    ├── chunks.ts            # Content retrieval for quiz generation
+    ├── gpt.ts              # OpenAI GPT quiz generation
+    └── prompts.ts          # AI prompt templates
 ```
 
 ## Processing Pipeline
@@ -22,6 +35,8 @@ services/
 Document Upload → Text Extraction → Chunking → Embeddings → Vector Storage
                                                                    ↓
                                                          Searchable Knowledge Base
+                                                                   ↓
+User Quiz Request → Semantic Search → AI Generation → Quiz Assembly
 ```
 
 ## Service Details

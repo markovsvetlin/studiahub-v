@@ -1,186 +1,214 @@
-# Handlers - Lambda Functions & API Endpoints
+# Handlers Directory Documentation
 
-**HTTP request handlers** that serve as the entry points for all API operations. Each handler is a Lambda function connected to API Gateway.
+## Overview
+The handlers directory contains AWS Lambda function handlers that serve as API endpoints for the StudiaHub-v2 application. Each handler represents a specific HTTP endpoint or event processor.
 
-## Handler Structure
+## File Structure
 
-```
-handlers/
-├── health.ts           # System health check
-└── files/             # File management operations
-    ├── filesList.ts   # List, delete, toggle files
-    ├── presignedUrl.ts # S3 upload URL generation
-    ├── fileStatus.ts  # Get file processing status
-    ├── processFile.ts # File processing orchestrator  
-    └── queue.ts       # SQS message processor
-```
+### Core Handler
+- `health.ts` - System health check endpoint
 
-## Handler Details
+### File Management Handlers (`/files/`)
+- `fileStatus.ts` - Check file processing status
+- `filesList.ts` - List user's uploaded files  
+- `presignedUrl.ts` - Generate secure S3 upload URLs
+- `processFile.ts` - Process uploaded files (text extraction, chunking, embeddings)
+- `queue.ts` - SQS queue handler for async file processing
 
-### 🏥 health.ts
-**Purpose:** System health monitoring  
-**Route:** `GET /health`  
-**Function:** Simple health check with service metadata
+### Quiz Management Handlers (`/quiz/`)
+- `deleteQuiz.ts` - Delete quiz and associated data
+- `generateQuiz.ts` - Initiate quiz generation process
+- `quizStatus.ts` - Check quiz generation progress
+- `quizWorker.ts` - Generate individual quiz questions (worker function)
 
+## Handler Patterns
+
+### 1. HTTP Request Handlers
 ```typescript
-export async function handler(_event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2>
-```
-
-**Response:**
-```json
-{
-  "ok": true,
-  "status": "healthy", 
-  "timestamp": "2024-01-15T10:30:00.000Z",
-  "service": "studiahub-backend",
-  "version": "1.0.0"
+export const handlerName = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+  try {
+    // Input validation
+    // Business logic
+    // Return formatted response
+  } catch (error) {
+    // Error handling and logging
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: 'Internal server error' })
+    }
+  }
 }
 ```
 
-### 📁 files/filesList.ts
-**Purpose:** File management operations  
-**Functions:** List files, delete files, toggle enable/disable
+### 2. SQS Event Handlers
+```typescript
+export const handlerName = async (event: SQSEvent): Promise<void> => {
+  for (const record of event.Records) {
+    // Process each SQS message
+    // Handle failures and retries
+  }
+}
+```
 
-#### `list()` - Get all processed files
-- **Route:** `GET /files`
-- **Logic:** Scans DynamoDB for files with `status = 'ready'`
-- **Processing:** Extracts filename from S3 key, estimates file size, determines content type
-- **Sorting:** Returns files sorted by creation date (newest first)
+## Key Functions by File
 
-#### `deleteFile()` - Remove file completely
-- **Route:** `DELETE /files/{id}`
-- **Logic:** 3-step deletion process:
-  1. Delete from S3 bucket
-  2. Delete vectors from Pinecone  
-  3. Delete record from DynamoDB
-- **Error Handling:** Continues with remaining deletions even if one step fails
+### `health.ts`
+**Function**: `health()`
+- **Purpose**: Health check endpoint for monitoring
+- **Returns**: Service status and timestamp
+- **Use Case**: Load balancer health checks, monitoring
 
-#### `toggleFile()` - Enable/disable in context pool
-- **Route:** `PATCH /files/{id}/toggle`
-- **Payload:** `{"isEnabled": boolean}`
-- **Logic:** Updates `isEnabled` field in DynamoDB
+### `fileStatus.ts`
+**Function**: `fileStatus(event)`
+- **Input**: `{ fileId }` in path parameters
+- **Purpose**: Get processing status of a specific file
+- **Business Logic**: Query DynamoDB for file metadata and processing status
+- **Returns**: File processing status and metadata
 
-### 🔗 files/presignedUrl.ts  
-**Purpose:** S3 upload URL management  
-**Functions:** Generate presigned URLs, confirm uploads
+### `filesList.ts`
+**Function**: `filesList(event)`
+- **Input**: Query parameters for pagination
+- **Purpose**: List all files for authenticated user
+- **Business Logic**: DynamoDB scan with user filtering
+- **Returns**: Array of user's files with metadata
 
-#### `generatePresignedUrl()` - Get upload URL
-- **Route:** `POST /upload/presigned`
-- **Validation:** File type, size limits (50MB max)
-- **Logic:** 
-  1. Validates file metadata
-  2. Generates unique S3 key with timestamp
-  3. Creates presigned PUT URL (1 hour expiry)
-  4. Creates DynamoDB record with `uploading` status
+### `presignedUrl.ts`
+**Function**: `presignedUrl(event)`
+- **Input**: `{ fileName, fileSize, contentType }` in request body
+- **Purpose**: Generate secure S3 upload URL
+- **Business Logic**: 
+  1. Validate file parameters
+  2. Create file record in DynamoDB
+  3. Generate presigned S3 URL
+- **Returns**: Presigned URL and file metadata
 
-#### `confirmUpload()` - Trigger processing
-- **Route:** `POST /upload/confirm`  
-- **Payload:** `{"key": "s3-object-key"}`
-- **Logic:**
-  1. Updates file status to `queued`
-  2. Sends message to SQS processing queue
+### `processFile.ts`
+**Function**: `processFile(event)`
+- **Input**: S3 event or direct invocation with file details
+- **Purpose**: Main file processing orchestrator
+- **Business Logic**:
+  1. Download file from S3
+  2. Extract text content
+  3. Create semantic chunks
+  4. Generate embeddings
+  5. Store in Pinecone vector database
+  6. Update processing status
+- **Error Handling**: Comprehensive error tracking and status updates
 
-### 📊 files/fileStatus.ts
-**Purpose:** Get file processing status  
-**Route:** `GET /files/{key+}?status=1`  
-**Logic:** Finds file by S3 key and returns current processing status
+### `queue.ts`
+**Function**: `queue(event)`
+- **Input**: SQS messages with file processing requests
+- **Purpose**: Handle async file processing queue
+- **Business Logic**: Process queued files by invoking processFile handler
+- **Retry Logic**: Dead letter queue for failed processing
 
-### ⚙️ files/processFile.ts
-**Purpose:** File processing orchestrator  
-**Trigger:** Called by `queue.ts` when SQS message received  
-**Process:**
-1. Text extraction (PDF/DOCX/OCR)
-2. Semantic chunking  
-3. Embedding generation with dynamic batching
-4. Vector storage in Pinecone
-5. Progress updates throughout
+### `deleteQuiz.ts`
+**Function**: `deleteQuiz(event)`
+- **Input**: `{ quizId }` in path parameters
+- **Purpose**: Delete quiz and clean up associated data
+- **Business Logic**: Remove quiz from DynamoDB and associated metadata
+- **Returns**: Deletion confirmation
 
-### 📨 files/queue.ts
-**Purpose:** SQS message processor  
-**Trigger:** SQS queue receives processing message  
-**Logic:** Parses SQS messages and calls `processObject()` from processFile.ts
+### `generateQuiz.ts`
+**Function**: `generateQuiz(event)`
+- **Input**: `{ fileIds, questionCount, difficulty }` in request body
+- **Purpose**: Initiate quiz generation process
+- **Business Logic**:
+  - **Local Mode**: Generate quiz synchronously for development
+  - **Production Mode**: Spawn multiple worker functions for parallel processing
+  - Track progress in completion tracker
+- **Returns**: Quiz ID and generation status
 
-## Common Patterns
+### `quizStatus.ts`
+**Function**: `quizStatus(event)`
+- **Input**: `{ quizId }` in path parameters
+- **Purpose**: Check quiz generation progress
+- **Business Logic**: Query completion tracker for progress updates
+- **Returns**: Progress percentage and completion status
 
-### Error Handling
+### `quizWorker.ts`
+**Function**: `quizWorker(event)`
+- **Input**: Worker assignment with question range and context
+- **Purpose**: Generate individual quiz questions in parallel
+- **Business Logic**:
+  1. Receive question assignment from main generator
+  2. Perform semantic search in Pinecone for relevant content
+  3. Generate questions using GPT-4 with context
+  4. Update completion tracker with generated questions
+- **Coordination**: Updates shared completion tracker for progress monitoring
+
+## Error Handling Patterns
+
+### 1. Input Validation
+```typescript
+if (!fileId) {
+  return {
+    statusCode: 400,
+    headers: corsHeaders,
+    body: JSON.stringify({ error: 'File ID is required' })
+  }
+}
+```
+
+### 2. Database Error Handling
 ```typescript
 try {
-  // Handler logic
-  return createSuccessResponse(data);
+  const result = await dynamodb.get(params).promise()
 } catch (error) {
-  console.error('Handler failed:', error);
-  return createErrorResponse(500, (error as Error).message);
+  console.error('Database error:', error)
+  return {
+    statusCode: 500,
+    headers: corsHeaders,
+    body: JSON.stringify({ error: 'Database operation failed' })
+  }
 }
 ```
 
-### Request Validation
+### 3. External Service Error Handling
 ```typescript
-if (!event.body) {
-  return createErrorResponse(400, 'Request body required');
-}
-
-const { fileName, contentType } = JSON.parse(event.body);
-if (!fileName || !contentType) {
-  return createErrorResponse(400, 'fileName and contentType required');
+try {
+  const response = await openai.createEmbedding(params)
+} catch (error) {
+  if (error.response?.status === 429) {
+    // Rate limiting - retry with backoff
+  }
+  throw error
 }
 ```
 
-### Database Operations
-- All handlers use utility functions from `../utils/files/database.ts`
-- Consistent error handling and logging
-- Atomic operations where possible
-
-### Response Format
-All handlers return standardized responses:
+## CORS Configuration
+All HTTP handlers include CORS headers for cross-origin requests:
 ```typescript
-// Success
-{ "ok": true, ...data }
-
-// Error  
-{ "ok": false, "error": "Error message" }
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+  'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
+}
 ```
 
-## Serverless Configuration
-
-Each handler is configured in `serverless.yml`:
-
-```yaml
-functions:
-  health:
-    handler: src/handlers/health.handler
-    events:
-      - httpApi: { path: /health, method: GET }
-  
-  filesGet:
-    handler: src/handlers/files/fileStatus.get
-    events:
-      - httpApi: { path: /files/{key+}, method: GET }
+## Authentication Integration
+Handlers integrate with Clerk authentication for user identification:
+```typescript
+const userId = event.requestContext?.authorizer?.userId
+if (!userId) {
+  return {
+    statusCode: 401,
+    headers: corsHeaders,
+    body: JSON.stringify({ error: 'Unauthorized' })
+  }
+}
 ```
 
-## Lambda Settings
+## Monitoring and Logging
+All handlers include comprehensive logging for debugging and monitoring:
+```typescript
+console.log(`Processing request: ${event.httpMethod} ${event.path}`)
+console.error('Error processing request:', error)
+```
 
-| Setting | Standard Functions | File Processor |
-|---------|-------------------|----------------|
-| **Memory** | 1024MB | 2048MB |
-| **Timeout** | 30 seconds | 900 seconds (15 min) |
-| **Runtime** | Node.js 20.x | Node.js 20.x |
-
-## IAM Permissions
-
-Each handler has access to:
-- **DynamoDB:** Read/write on Files and Items tables
-- **S3:** Read/write/delete on designated bucket  
-- **SQS:** Send messages to processing queue
-- **Textract:** Document text detection
-- **CloudWatch:** Logging (automatic)
-
-## Error Recovery
-
-- **Retry Logic:** SQS handles retries with exponential backoff
-- **Dead Letter Queue:** Failed messages moved to DLQ after 3 attempts
-- **Partial Failures:** File deletion continues even if some steps fail
-- **Status Tracking:** All operations update file status in real-time
-
----
-
-*Each handler is designed for single responsibility and easy testing.*
+## Performance Considerations
+- **Timeouts**: Configured per handler based on expected execution time
+- **Memory**: Allocated based on processing requirements
+- **Concurrency**: Limited to prevent overwhelming downstream services
+- **Cold Starts**: Minimized through proper initialization patterns

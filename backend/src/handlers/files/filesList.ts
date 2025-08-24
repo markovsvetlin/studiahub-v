@@ -3,17 +3,18 @@
  */
 
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
-import { ScanCommand, DeleteCommand, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { DeleteCommand, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { db } from '../../db';
 import { FILES_TABLE, S3_BUCKET, AWS_REGION } from '../../utils/constants';
 import { createErrorResponse, createSuccessResponse } from '../../utils/http';
 import { pineconeService } from '../../services/files/pinecone';
+import { getUserReadyFiles } from '../../utils/files/database';
 
 const s3 = new S3Client({ region: AWS_REGION });
 
 /**
- * List all files
+ * List user's ready files - now using optimal GSI query (no filtering!)
  */
 export async function list(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
   try {
@@ -22,19 +23,10 @@ export async function list(event: APIGatewayProxyEventV2): Promise<APIGatewayPro
       return createErrorResponse(400, 'userId query parameter required');
     }
 
-    const result = await db.send(new ScanCommand({
-      TableName: FILES_TABLE,
-      FilterExpression: '#status = :status AND userId = :userId',
-      ExpressionAttributeNames: {
-        '#status': 'status'
-      },
-      ExpressionAttributeValues: {
-        ':status': 'ready',
-        ':userId': userId
-      }
-    }));
+    // Direct query for ready files - no filtering needed!
+    const readyFiles = await getUserReadyFiles(userId);
 
-    const files = (result.Items || []).map(item => {
+    const files = readyFiles.map(item => {
       // Extract filename from key (remove timestamp prefix)
       const keyParts = item.key.split('/');
       const filename = keyParts[keyParts.length - 1];
@@ -73,7 +65,7 @@ export async function list(event: APIGatewayProxyEventV2): Promise<APIGatewayPro
       };
     });
 
-    // Sort by creation date (newest first)
+    // Sort by creation date (newest first) - simple and clean
     files.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     return createSuccessResponse({ files });

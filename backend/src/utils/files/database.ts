@@ -92,30 +92,44 @@ export async function findFileByKey(key: string): Promise<any> {
 
 /**
  * Get IDs of all enabled and ready files for a user
+ * Now uses optimal GSI: direct query by userId + status, minimal filtering
  */
-export async function getEnabledFileIds(userId?: string): Promise<string[]> {
-  const filterExpression = userId 
-    ? '#status = :status AND #isEnabled = :isEnabled AND userId = :userId'
-    : '#status = :status AND #isEnabled = :isEnabled';
-    
-  const expressionAttributeValues: any = { 
-    ':status': 'ready',
-    ':isEnabled': true
-  };
-  
-  if (userId) {
-    expressionAttributeValues[':userId'] = userId;
-  }
-  
-  const result = await db.send(new ScanCommand({
+export async function getEnabledFileIds(userId: string): Promise<string[]> {
+  const result = await db.send(new QueryCommand({
     TableName: FILES_TABLE,
-    FilterExpression: filterExpression,
+    IndexName: 'user-status-index',
+    KeyConditionExpression: 'userId = :userId AND #status = :status',
+    FilterExpression: '#isEnabled = :isEnabled',
     ExpressionAttributeNames: { 
       '#status': 'status',
       '#isEnabled': 'isEnabled'
     },
-    ExpressionAttributeValues: expressionAttributeValues
+    ExpressionAttributeValues: {
+      ':userId': userId,
+      ':status': 'ready',
+      ':isEnabled': true
+    }
   }));
   
   return (result.Items || []).map(item => item.id);
+}
+
+/**
+ * Get user's ready files (for file listing)
+ */
+export async function getUserReadyFiles(userId: string): Promise<FileRecord[]> {
+  const result = await db.send(new QueryCommand({
+    TableName: FILES_TABLE,
+    IndexName: 'user-status-index',
+    KeyConditionExpression: 'userId = :userId AND #status = :status',
+    ExpressionAttributeNames: { 
+      '#status': 'status'
+    },
+    ExpressionAttributeValues: {
+      ':userId': userId,
+      ':status': 'ready'
+    }
+  }));
+  
+  return (result.Items as FileRecord[]) || [];
 }
