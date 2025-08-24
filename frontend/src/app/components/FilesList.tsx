@@ -293,9 +293,23 @@ export default function FilesList({
               </Button>
             }
             existingQuizNames={[]} // TODO: Pass actual existing quiz names if needed
-            onGenerateQuiz={(settings) => {
+            onGenerateQuiz={async (settings) => {
               console.log('Generating quiz with settings:', settings)
-              // TODO: Implement quiz generation logic
+              
+              try {
+                const { quizService } = await import('../service/quiz')
+                
+                const response = await quizService.generateQuiz({
+                  focusArea: settings.topic || undefined,
+                  questionCount: settings.questionCount
+                })
+                
+                console.log('Quiz generated successfully:', response)
+                // TODO: Handle the quiz response - pass to quiz component or store in state
+              } catch (error) {
+                console.error('Failed to generate quiz:', error)
+                // TODO: Show error notification to user
+              }
             }}
           />
         </div>

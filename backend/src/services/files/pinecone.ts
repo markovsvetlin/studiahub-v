@@ -191,6 +191,93 @@ class PineconeService {
 
 
   /**
+   * Search for similar chunks using vector similarity
+   */
+  async searchChunks(queryVector: number[], options: SearchOptions = {}, userId?: string): Promise<SearchResult[]> {
+    if (!this.index) {
+      throw new Error('Pinecone not initialized. Call initialize() first.')
+    }
+
+    try {
+      const namespace = this.getUserNamespace(userId)
+      const {
+        topK = 10,
+        includeMetadata = true,
+        filter
+      } = options
+
+      console.log(`🔍 Searching ${topK} chunks in namespace: ${namespace}`)
+      if (filter) {
+        console.log(`🔧 Using filter: ${JSON.stringify(filter)}`)
+      }
+
+      const queryRequest = {
+        vector: queryVector,
+        topK,
+        includeMetadata,
+        ...(filter && { filter })
+      }
+
+      const searchResults = await this.index.namespace(namespace).query(queryRequest)
+      
+      const results: SearchResult[] = (searchResults.matches || []).map((match: any) => ({
+        id: match.id,
+        score: match.score,
+        metadata: match.metadata || {}
+      }))
+
+      console.log(`✅ Found ${results.length} matching chunks`)
+      return results
+    } catch (error) {
+      console.error('❌ Failed to search chunks:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get random chunks from enabled files
+   */
+  async getRandomChunks(enabledFileIds: string[], count: number, userId?: string): Promise<SearchResult[]> {
+    if (!this.index) {
+      throw new Error('Pinecone not initialized. Call initialize() first.')
+    }
+
+    if (enabledFileIds.length === 0) {
+      return []
+    }
+
+    try {
+      const namespace = this.getUserNamespace(userId)
+      console.log(`🎲 Getting ${count} random chunks from ${enabledFileIds.length} enabled files`)
+
+      // Create a random query vector to get diverse results
+      const randomVector = Array(EMBEDDING_DIMENSION).fill(0).map(() => (Math.random() - 0.5) * 0.1)
+
+      const filter = {
+        fileId: { $in: enabledFileIds }
+      }
+
+      // Get more chunks than needed to allow for randomization
+      const searchCount = Math.min(count * 3, 100)
+      
+      const searchResults = await this.searchChunks(randomVector, {
+        topK: searchCount,
+        filter
+      }, userId)
+
+      // Randomly sample the requested number of chunks
+      const shuffled = searchResults.sort(() => Math.random() - 0.5)
+      const selected = shuffled.slice(0, count)
+
+      console.log(`✅ Selected ${selected.length} random chunks from ${searchResults.length} candidates`)
+      return selected
+    } catch (error) {
+      console.error('❌ Failed to get random chunks:', error)
+      throw error
+    }
+  }
+
+  /**
    * Delete all chunks for a file
    */
   async deleteFileChunks(fileId: string, userId?: string): Promise<void> {
