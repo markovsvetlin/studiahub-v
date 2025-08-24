@@ -18,8 +18,10 @@ import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { FileListItem, FileListProps, SortField, SortDirection } from '@/types/file'
-import QuizDrawer from './QuizDrawer'
 import { useUser } from "@clerk/nextjs";
+import QuizDrawer from './QuizDrawer'
+import QuizQuestions from './QuizQuestions'
+import { useQuiz } from '../hooks/useQuiz'
 
 function formatBytes(bytes: number): string {
   const sizes = ['B', 'KB', 'MB', 'GB']
@@ -201,10 +203,20 @@ export default function FilesList({
   sortDirection = 'desc',
   onSort
 }: FileListProps) {
+  const { user } = useUser();
   const [internalSortField, setInternalSortField] = useState<SortField>(sortField)
   const [internalSortDirection, setInternalSortDirection] = useState<SortDirection>(sortDirection)
-  const { user } = useUser();
-console.log('User:', user);
+  
+  // Quiz management
+  const {
+    isGenerating,
+    quizData,
+    showQuizQuestions,
+    setShowQuizQuestions,
+    showQuizSettings,
+    setShowQuizSettings,
+    handleGenerateQuiz
+  } = useQuiz(user?.id)
   const currentSortField = onSort ? sortField : internalSortField
   const currentSortDirection = onSort ? sortDirection : internalSortDirection
 
@@ -270,7 +282,29 @@ console.log('User:', user);
   }
 
   return (
-    <Card className="max-w-4xl w-full">
+    <>
+    <Card className="max-w-4xl w-full relative">
+      {/* Loading Overlay */}
+      {isGenerating && (
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
+          <div className="bg-neutral-900 border border-neutral-700 rounded-xl p-8 text-center space-y-4 shadow-2xl">
+            <div className="flex items-center justify-center">
+              <div className="w-12 h-12 border-4 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold text-white">Generating Quiz</h3>
+              <p className="text-neutral-400 text-sm">
+                AI is analyzing your documents and creating personalized questions...
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-neutral-500">
+              <div className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse"></div>
+              <span>This may take 30-60 seconds</span>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <CardHeader>
         <div className="flex items-start justify-between">
           <div>
@@ -288,35 +322,26 @@ console.log('User:', user);
             trigger={
               <Button 
                 size="lg" 
-                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700"
+                className={`flex items-center gap-2 transition-all duration-200 ${
+                  isGenerating 
+                    ? 'bg-indigo-500 hover:bg-indigo-500 animate-pulse' 
+                    : 'bg-indigo-600 hover:bg-indigo-700'
+                }`}
+                disabled={isGenerating}
               >
-                <Brain className="h-5 w-5" />
-                Generate Quiz
+                {isGenerating ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Brain className="h-5 w-5" />
+                )}
+                {isGenerating ? 'Generating...' : 'Generate Quiz'}
               </Button>
             }
-            existingQuizNames={[]} // TODO: Pass actual existing quiz names if needed
-            onGenerateQuiz={async (settings) => {
-              console.log('Generating quiz with settings:', settings)
-              
-              try {
-                const { generateAndWaitForQuiz } = await import('../services/quiz')
-              
-                const response = await generateAndWaitForQuiz({
-                  userId: user?.id || '',
-                  questionCount: settings.questionCount,
-                  quizName: settings.topic || 'Generated Quiz',
-                  minutes: Math.ceil(settings.questionCount * 1.5),
-                  difficulty: 'medium',
-                  topic: settings.topic || undefined
-                })
-                
-                console.log('Quiz generated successfully:', response)
-                // TODO: Handle the quiz response - pass to quiz component or store in state
-              } catch (error) {
-                console.error('Failed to generate quiz:', error)
-                // TODO: Show error notification to user
-              }
-            }}
+            existingQuizNames={[]}
+            onGenerateQuiz={handleGenerateQuiz}
+            isGenerating={isGenerating}
+            open={showQuizSettings}
+            onOpenChange={setShowQuizSettings}
           />
         </div>
 
@@ -381,5 +406,13 @@ console.log('User:', user);
         </div>
       </CardContent>
     </Card>
+    
+    {/* Quiz Questions Drawer */}
+    <QuizQuestions 
+      open={showQuizQuestions}
+      onOpenChange={setShowQuizQuestions}
+      quizData={quizData}
+    />
+  </>
   )
 }

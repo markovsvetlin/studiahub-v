@@ -19,9 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Brain } from 'lucide-react'
+import { Brain, Loader2 } from 'lucide-react'
 
-interface QuizSettings {
+export interface QuizSettings {
   quizName: string
   minutes: number
   questionCount: number
@@ -34,14 +34,19 @@ interface QuizDrawerProps {
   trigger: React.ReactNode
   existingQuizNames?: string[]
   onGenerateQuiz: (settings: QuizSettings) => void
+  isGenerating?: boolean
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }
 
 export default function QuizDrawer({ 
   trigger, 
   existingQuizNames = [], 
-  onGenerateQuiz 
+  onGenerateQuiz,
+  isGenerating = false,
+  open,
+  onOpenChange
 }: QuizDrawerProps) {
-  const [open, setOpen] = useState(false)
   const [formData, setFormData] = useState<QuizSettings>({
     quizName: generateDefaultQuizName(existingQuizNames),
     minutes: 5,
@@ -102,7 +107,7 @@ export default function QuizDrawer({
   const handleSubmit = () => {
     if (validateForm()) {
       onGenerateQuiz(formData)
-      setOpen(false)
+      onOpenChange(false)
       // Reset form for next use
       setFormData({
         quizName: generateDefaultQuizName(existingQuizNames),
@@ -128,7 +133,7 @@ export default function QuizDrawer({
   }
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>
         {trigger}
       </SheetTrigger>
@@ -261,9 +266,14 @@ export default function QuizDrawer({
               onClick={handleSubmit}
               size="lg"
               className="bg-indigo-600 hover:bg-indigo-700"
+              disabled={isGenerating}
             >
-              <Brain className="w-5 h-5 mr-2" />
-              Generate Quiz
+              {isGenerating ? (
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              ) : (
+                <Brain className="w-5 h-5 mr-2" />
+              )}
+              {isGenerating ? 'Generating...' : 'Generate Quiz'}
             </Button>
           </div>
         </div>
