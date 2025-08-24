@@ -7,17 +7,18 @@ import { generateQuizQuestions } from '../../services/quiz/gpt';
 import { ChunkContent } from '../../services/quiz/prompts';
 import { 
   getQuizRecord, 
-  addQuestionsToQuiz, 
-  updateWorkerProgress,
+  addQuestionsToQuiz,
   completeQuiz,
   markQuizError,
   QuizMetadata 
 } from '../../utils/quiz/database';
+import { markWorkerCompleted } from '../../utils/quiz/completionTracker';
 
 interface WorkerTask {
   quizId: string
   chunks: ChunkContent[]
-  metadata: QuizMetadata
+  difficulty: 'easy' | 'medium' | 'hard'
+  topic?: string
   questionCount: number
   workerIndex: number
 }
@@ -26,23 +27,11 @@ interface WorkerTask {
  * Quiz Worker Handler - processes SQS messages
  */
 export async function handler(event: SQSEvent): Promise<void> {
-  console.log(`👷 Quiz worker processing ${event.Records.length} tasks`);
+  console.log(`👷 Processing ${event.Records.length} worker tasks`);
 
   // Process all messages in parallel
-  const promises = event.Records.map(async (record, index) => {
-    try {
-      console.log(`🚀 Starting worker task ${index + 1}/${event.Records.length}`);
-      await processWorkerTask(record);
-      console.log(`✅ Completed worker task ${index + 1}/${event.Records.length}`);
-    } catch (error) {
-      console.error(`❌ Failed to process worker task ${index + 1}/${event.Records.length}:`, error);
-      // Let SQS handle retry via DLQ configuration
-      throw error;
-    }
-  });
-
+  const promises = event.Records.map(processWorkerTask);
   await Promise.all(promises);
-  console.log(`✅ Quiz worker handler completed processing ${event.Records.length} tasks`);
 }
 
 /**
@@ -53,31 +42,37 @@ async function processWorkerTask(record: SQSRecord): Promise<void> {
   let task: WorkerTask;
   try {
     task = JSON.parse(record.body);
+    console.log(`🚀 Processing worker task for quiz ${task.quizId}, worker ${task.workerIndex}`);
   } catch {
     console.error('Invalid task JSON in SQS message');
     return; // Don't retry invalid JSON
   }
   
-  const { quizId, chunks, metadata, questionCount, workerIndex } = task;
-  console.log(`🔨 Worker ${workerIndex}: ${chunks.length} chunks, ${questionCount} questions (${metadata.difficulty}) - ${new Date().toISOString()}`);
+  const { quizId, chunks, difficulty, topic, questionCount, workerIndex } = task;
 
   try {
-    // Generate questions
-    console.log(`🔄 Worker ${workerIndex} starting question generation...`);
-    const gptStart = Date.now();
+    // Generate questions using GPT
+    const gptStartTime = Date.now();
+    const metadata = { 
+      difficulty, 
+      topic, 
+      questionCount, 
+      quizName: '', // Not needed for question generation
+      minutes: 0 // Not needed for question generation
+    };
     const questions = await generateQuizQuestions({ chunks, metadata, questionCount });
-    const gptDuration = Date.now() - gptStart;
-    console.log(`📝 Worker ${workerIndex} generated ${questions.length} questions in ${gptDuration}ms`);
+    const gptDuration = Date.now() - gptStartTime;
 
-    // Add questions and update worker progress
-    const dbStart = Date.now();
+    // Add questions to quiz
+    const dbStartTime = Date.now();
     await addQuestionsToQuiz(quizId, questions);
-    const { completed, total, isAllComplete } = await updateWorkerProgress(quizId);
-    const dbDuration = Date.now() - dbStart;
-    console.log(`💾 Worker ${workerIndex} database operations: ${dbDuration}ms`);
+    const dbDuration = Date.now() - dbStartTime;
+    
+    // Check if all workers are complete
+    const isAllComplete = await markWorkerCompleted(quizId);
     
     const workerDurationMs = Date.now() - workerStartTime;
-    console.log(`👥 Worker ${workerIndex} completed (${completed}/${total}) in ${workerDurationMs}ms`);
+    console.log(`✅ Worker ${workerIndex}: ${questions.length} questions | GPT: ${gptDuration}ms | DB: ${dbDuration}ms | Total: ${workerDurationMs}ms`);
 
     if (isAllComplete) {
       await finalizeQuiz(quizId);
@@ -101,8 +96,9 @@ async function processWorkerTask(record: SQSRecord): Promise<void> {
  * Finalize quiz when all workers are complete
  */
 async function finalizeQuiz(quizId: string): Promise<void> {
-  console.log(`🏁 Finalizing quiz ${quizId}...`);
-
+  const finalizeStartTime = Date.now();
+  console.log(`🏁 Starting finalization for quiz ${quizId}`);
+  
   try {
     const quiz = await getQuizRecord(quizId);
     if (!quiz || !quiz.questions.length) {
@@ -112,10 +108,11 @@ async function finalizeQuiz(quizId: string): Promise<void> {
     // Shuffle questions for variety
     const shuffledQuestions = [...quiz.questions].sort(() => Math.random() - 0.5);
     
-    // Complete quiz (this will log the total duration)
+    // Complete quiz
     await completeQuiz(quizId, shuffledQuestions);
     
-    console.log(`🎯 Final quiz stats - Questions: ${shuffledQuestions.length}`);
+    const finalizeDuration = Date.now() - finalizeStartTime;
+    console.log(`✅ Quiz ${quizId} finalization completed in ${finalizeDuration}ms`);
 
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Finalization failed';

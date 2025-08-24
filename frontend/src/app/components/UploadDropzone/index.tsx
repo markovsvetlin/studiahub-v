@@ -129,7 +129,7 @@ export default function UploadDropzone({
         clearInterval(cleanupInterval)
       }
     }
-  }, [makeKey, selectedFiles, setProgress])
+  }, [makeKey, selectedFiles, setProgress, onUploadComplete, userId])
 
   const openPicker = () => { if (inputRef.current) inputRef.current.value = ''; inputRef.current?.click() }
 

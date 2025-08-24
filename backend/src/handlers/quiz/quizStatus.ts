@@ -22,12 +22,15 @@ export async function getQuizStatus(event: APIGatewayProxyEventV2): Promise<APIG
       return createErrorResponse(404, 'Quiz not found')
     }
 
-    // Simple progress calculation from worker completion
+    // Calculate progress based on status and question count
     let progress = 0;
     if (quiz.status === 'ready') {
       progress = 100;
-    } else if (quiz.status === 'processing' && quiz.workers) {
-      progress = Math.round((quiz.workers.completed / quiz.workers.total) * 100);
+    } else if (quiz.status === 'processing') {
+      // Show progress based on questions collected vs expected
+      const currentQuestions = quiz.questions?.length || 0;
+      const expectedQuestions = quiz.metadata.questionCount;
+      progress = expectedQuestions > 0 ? Math.round((currentQuestions / expectedQuestions) * 100) : 0;
     }
     
     // Build streamlined response
@@ -44,7 +47,7 @@ export async function getQuizStatus(event: APIGatewayProxyEventV2): Promise<APIG
       response.questions = quiz.questions
       response.completedAt = quiz.completedAt
     }
-    if (quiz.status === 'processing' && quiz.workers) response.workers = quiz.workers
+    // No worker tracking needed
     if (quiz.status === 'error') response.error = quiz.error
 
     console.log(`✅ Quiz ${quizId} status: ${quiz.status} (${progress}%)`)
@@ -71,24 +74,15 @@ export async function getUserQuizzes(event: APIGatewayProxyEventV2): Promise<API
     const quizzes = await dbGetUserQuizzes(userId)
     
     // Return summary info only (not full questions)
-    const summaries = quizzes.map(quiz => {
-      let progress = 0;
-      if (quiz.status === 'ready') {
-        progress = 100;
-      } else if (quiz.status === 'processing' && quiz.workers) {
-        progress = Math.round((quiz.workers.completed / quiz.workers.total) * 100);
-      }
-      
-      return {
-        quizId: quiz.id,
-        quizName: quiz.metadata.quizName,
-        status: quiz.status,
-        progress: progress,
-        questionCount: quiz.metadata.questionCount,
-        createdAt: quiz.createdAt,
-        completedAt: quiz.completedAt
-      };
-    })
+    const summaries = quizzes.map(quiz => ({
+      quizId: quiz.id,
+      quizName: quiz.metadata.quizName,
+      status: quiz.status,
+      progress: quiz.status === 'ready' ? 100 : 0,
+      questionCount: quiz.metadata.questionCount,
+      createdAt: quiz.createdAt,
+      completedAt: quiz.completedAt
+    }))
 
     return createSuccessResponse({ userId, quizzes: summaries })
 

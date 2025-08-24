@@ -12,6 +12,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Brain } from 'lucide-react'
 
 interface QuizSettings {
@@ -73,9 +80,9 @@ export default function QuizDrawer({
       newErrors.minutes = 'Minutes must be between 1 and 60'
     }
 
-    // Questions validation
-    if (formData.questionCount < 1 || formData.questionCount > 30) {
-      newErrors.questionCount = 'Questions must be between 1 and 30'
+    // Questions validation - now only accepts 10, 20, 30
+    if (![10, 20, 30].includes(formData.questionCount)) {
+      newErrors.questionCount = 'Questions must be 10, 20, or 30'
     }
 
     // Topic validation (optional but with char limit)
@@ -110,7 +117,10 @@ export default function QuizDrawer({
   }
 
   const updateFormData = (field: keyof QuizSettings, value: string | number) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+    setFormData(prev => ({ 
+      ...prev, 
+      [field]: field === 'questionCount' && typeof value === 'string' ? parseInt(value) : value 
+    }))
     // Clear error for this field when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }))
@@ -169,16 +179,20 @@ export default function QuizDrawer({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="questions">Number of Questions *</Label>
-              <Input
-                id="questions"
-                type="number"
-                min="1"
-                max="30"
-                value={formData.questionCount}
-                onChange={(e) => updateFormData('questionCount', parseInt(e.target.value) || 1)}
-                className={errors.questionCount ? "border-red-500" : ""}
-              />
+              <Label htmlFor="questions">Questions Amount *</Label>
+              <Select
+                value={formData.questionCount.toString()}
+                onValueChange={(value) => updateFormData('questionCount', parseInt(value))}
+              >
+                <SelectTrigger className={errors.questionCount ? "border-red-500" : ""}>
+                  <SelectValue placeholder="Select question count" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10 questions</SelectItem>
+                  <SelectItem value="20">20 questions</SelectItem>
+                  <SelectItem value="30">30 questions</SelectItem>
+                </SelectContent>
+              </Select>
               {errors.questionCount && (
                 <p className="text-sm text-red-500">{errors.questionCount}</p>
               )}

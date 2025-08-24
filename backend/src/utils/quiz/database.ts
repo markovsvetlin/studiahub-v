@@ -26,11 +26,7 @@ export interface QuizMetadata {
   questionCount: number
 }
 
-export interface WorkerProgress {
-  completed: number
-  total: number
-  failed?: number
-}
+// Worker progress tracking removed - not needed
 
 export interface QuizRecord {
   id: string
@@ -38,18 +34,15 @@ export interface QuizRecord {
   status: 'processing' | 'ready' | 'error'
   metadata: QuizMetadata
   questions: QuizQuestion[]
-  workers?: WorkerProgress
   error?: string
   createdAt: string
   updatedAt?: string
   completedAt?: string
-  startedAt?: string // When processing actually started
 }
 
 export interface CreateQuizRequest {
   userId: string
   metadata: QuizMetadata
-  estimatedWorkers?: number
 }
 
 /**
@@ -63,13 +56,7 @@ export async function createQuizRecord(request: CreateQuizRequest): Promise<Quiz
     status: 'processing',
     metadata: request.metadata,
     questions: [],
-    workers: request.estimatedWorkers ? {
-      completed: 0,
-      total: request.estimatedWorkers,
-      failed: 0
-    } : undefined,
-    createdAt: now,
-    startedAt: now
+    createdAt: now
   };
   
   await db.send(new PutCommand({
@@ -94,37 +81,7 @@ export async function getQuizRecord(quizId: string): Promise<QuizRecord | null> 
 }
 
 
-/**
- * Update worker progress atomically and return current state
- */
-export async function updateWorkerProgress(quizId: string): Promise<{ completed: number; total: number; isAllComplete: boolean }> {
-  try {
-    const result = await db.send(new UpdateCommand({
-      TableName: QUIZ_TABLE,
-      Key: { id: quizId },
-      UpdateExpression: 'SET workers.completed = workers.completed + :inc, updatedAt = :updatedAt',
-      ExpressionAttributeValues: {
-        ':inc': 1,
-        ':updatedAt': new Date().toISOString()
-      },
-      ReturnValues: 'ALL_NEW'
-    }));
-
-    const quiz = result.Attributes as QuizRecord;
-    const { completed, total } = quiz.workers!;
-    
-    console.log(`👥 Worker progress updated for quiz ${quizId}: ${completed}/${total} (${Math.round((completed/total)*100)}%)`);
-    
-    return {
-      completed,
-      total,
-      isAllComplete: completed >= total
-    };
-  } catch (error) {
-    console.error(`❌ Failed to update worker progress for quiz ${quizId}:`, error);
-    throw error;
-  }
-}
+// Worker progress tracking removed - using simple completion check
 
 /**
  * Add questions to quiz atomically (prevents race conditions between workers)
@@ -152,17 +109,6 @@ export async function addQuestionsToQuiz(quizId: string, newQuestions: QuizQuest
 export async function completeQuiz(quizId: string, questions: QuizQuestion[]): Promise<void> {
   const completedAt = new Date().toISOString();
   
-  // Get the quiz record to calculate duration
-  const quiz = await getQuizRecord(quizId);
-  let durationLog = '';
-  if (quiz?.startedAt) {
-    const startTime = new Date(quiz.startedAt).getTime();
-    const endTime = new Date(completedAt).getTime();
-    const durationMs = endTime - startTime;
-    const durationSeconds = (durationMs / 1000).toFixed(2);
-    durationLog = ` in ${durationMs}ms (${durationSeconds}s)`;
-  }
-  
   await db.send(new UpdateCommand({
     TableName: QUIZ_TABLE,
     Key: { id: quizId },
@@ -178,7 +124,7 @@ export async function completeQuiz(quizId: string, questions: QuizQuestion[]): P
     }
   }));
 
-  console.log(`🎉 Quiz ${quizId} completed with ${questions.length} questions${durationLog}`);
+  console.log(`🎉 Quiz ${quizId} completed with ${questions.length} questions`);
 }
 
 /**
@@ -186,17 +132,6 @@ export async function completeQuiz(quizId: string, questions: QuizQuestion[]): P
  */
 export async function markQuizError(quizId: string, error: string): Promise<void> {
   const failedAt = new Date().toISOString();
-  
-  // Get the quiz record to calculate duration
-  const quiz = await getQuizRecord(quizId);
-  let durationLog = '';
-  if (quiz?.startedAt) {
-    const startTime = new Date(quiz.startedAt).getTime();
-    const endTime = new Date(failedAt).getTime();
-    const durationMs = endTime - startTime;
-    const durationSeconds = (durationMs / 1000).toFixed(2);
-    durationLog = ` after ${durationMs}ms (${durationSeconds}s)`;
-  }
   
   await db.send(new UpdateCommand({
     TableName: QUIZ_TABLE,
@@ -212,7 +147,7 @@ export async function markQuizError(quizId: string, error: string): Promise<void
     }
   }));
 
-  console.error(`❌ Quiz ${quizId} failed${durationLog}: ${error}`);
+  console.error(`❌ Quiz ${quizId} failed: ${error}`);
 }
 
 /**

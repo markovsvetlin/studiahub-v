@@ -129,7 +129,20 @@ const generateAndWaitForQuiz = async (quizData: QuizData): Promise<QuizStatus> =
   return completedQuiz
 }
 
-const getUserQuizzes = async (userId: string): Promise<any> => {
+interface UserQuizzesResponse {
+  userId: string;
+  quizzes: Array<{
+    quizId: string;
+    quizName: string;
+    status: 'processing' | 'ready' | 'error';
+    progress: number;
+    questionCount: number;
+    createdAt: string;
+    completedAt?: string;
+  }>;
+}
+
+const getUserQuizzes = async (userId: string): Promise<UserQuizzesResponse> => {
   const response = await fetch(`${apiUrl}/quiz/user?userId=${userId}`, {
     method: 'GET',
     headers: {

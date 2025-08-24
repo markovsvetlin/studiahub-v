@@ -11,6 +11,7 @@ import {
   markQuizError,
   QuizMetadata 
 } from '../../utils/quiz/database'
+import { initializeCompletion } from '../../utils/quiz/completionTracker'
 import { QUIZ_QUEUE_URL } from '../../utils/constants'
 
 const IS_LOCAL = process.env.IS_OFFLINE === 'true' || process.env.NODE_ENV === 'development'
@@ -28,7 +29,8 @@ interface GenerateQuizRequest {
 interface WorkerTask {
   quizId: string
   chunks: ChunkContent[]
-  metadata: QuizMetadata
+  difficulty: 'easy' | 'medium' | 'hard'
+  topic?: string
   questionCount: number
   workerIndex: number
 }
@@ -38,7 +40,8 @@ interface WorkerTask {
  * Handles both local (direct) and production (worker-based) flows
  */
 export async function generateQuiz(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
-  const startTime = Date.now();
+  const orchestratorStartTime = Date.now();
+  console.log(`🕐 Quiz orchestrator started at ${new Date().toISOString()}`);
   try {
     if (!event.body) {
       return createErrorResponse(400, 'Request body required')
@@ -57,10 +60,7 @@ export async function generateQuiz(event: APIGatewayProxyEventV2): Promise<APIGa
       return createErrorResponse(400, validationError)
     }
 
-    console.log(`🎯 Starting quiz generation (${IS_LOCAL ? 'LOCAL' : 'PROD'} mode) - ${new Date().toISOString()}`)
-    console.log(`📋 Quiz: "${request.quizName}" | Questions: ${request.questionCount} | Difficulty: ${request.difficulty}`)
-
-    console.log('📚 Retrieving relevant content chunks...')
+    console.log(`🎯 Generating quiz (${IS_LOCAL ? 'LOCAL' : 'PROD'}): ${request.questionCount} ${request.difficulty} questions`);
     
     const retrievedChunks = await retrieveChunksForQuiz({
       focusArea: request.topic,
@@ -97,13 +97,13 @@ export async function generateQuiz(event: APIGatewayProxyEventV2): Promise<APIGa
       result = await handleProductionFlow(chunks, metadata, request.userId)
     }
     
-    const durationMs = Date.now() - startTime;
-    console.log(`⏱️ Quiz generation orchestrator completed in ${durationMs}ms (${(durationMs/1000).toFixed(2)}s)`);
+    const orchestratorDurationMs = Date.now() - orchestratorStartTime;
+    console.log(`⏱️ Quiz orchestrator completed in ${orchestratorDurationMs}ms (${(orchestratorDurationMs/1000).toFixed(2)}s)`);
     return result;
 
   } catch (error) {
-    const durationMs = Date.now() - startTime;
-    console.error(`❌ Quiz generation failed after ${durationMs}ms:`, error)
+    const orchestratorDurationMs = Date.now() - orchestratorStartTime;
+    console.error(`❌ Quiz orchestrator failed after ${orchestratorDurationMs}ms:`, error)
     return createErrorResponse(500, `Quiz generation failed: ${(error as Error).message}`)
   }
 }
@@ -135,7 +135,7 @@ async function handleLocalFlow(
     // Complete quiz
     await completeQuiz(quiz.id, questions)
 
-    console.log(`🎉 Local quiz generation completed: ${quiz.id}`)
+    console.log(`🎉 Quiz ${quiz.id} completed locally`);
 
     return createSuccessResponse({
       quizId: quiz.id,
@@ -161,17 +161,18 @@ async function handleProductionFlow(
   console.log('⚙️ Using PRODUCTION flow - worker-based generation')
 
   try {
-    // Calculate optimal worker distribution
+    // Calculate worker distribution
     const distribution = calculateWorkerDistribution(chunks.length, metadata.questionCount)
-    console.log(`👥 Spawning ${distribution.workerCount} workers for ${chunks.length} chunks, ${metadata.questionCount} questions`);
-    console.log(`📊 Distribution: ${distribution.chunksPerWorker} chunks/worker, ${distribution.questionsPerWorker} questions/worker`);
+    console.log(`👥 Spawning ${distribution.workerCount} workers for ${chunks.length} chunks`);
 
-    // Create quiz record with worker tracking
+    // Create quiz record
     const quiz = await createQuizRecord({
       userId,
-      metadata,
-      estimatedWorkers: distribution.workerCount
+      metadata
     })
+    
+    // Initialize completion tracking
+    initializeCompletion(quiz.id, distribution.workerCount);
 
     // Split chunks and spawn workers
     const workerTasks = createWorkerTasks(chunks, metadata, distribution, quiz.id)
@@ -179,15 +180,11 @@ async function handleProductionFlow(
     // Send tasks to SQS queue
     await spawnWorkers(workerTasks)
 
-    console.log(`🎯 Production flow initiated: ${quiz.id} with ${distribution.workerCount} workers`)
+    console.log(`🎯 Quiz ${quiz.id} processing started`);
 
     return createSuccessResponse({
       quizId: quiz.id,
       status: 'processing',
-      workers: {
-        total: distribution.workerCount,
-        completed: 0
-      },
       message: 'Quiz generation started! Use the quiz ID to check progress.'
     })
 
@@ -198,20 +195,34 @@ async function handleProductionFlow(
 }
 
 /**
- * Calculate optimal worker distribution
+ * Worker distribution based on fixed question amounts
+ * 10 questions → 2 workers (5 each)
+ * 20 questions → 4 workers (5 each) 
+ * 30 questions → 6 workers (5 each)
  */
 function calculateWorkerDistribution(chunkCount: number, questionCount: number) {
-  // Target: 2 chunks per worker, max 5 workers
-  const idealWorkers = Math.ceil(chunkCount / 2)
-  const workerCount = Math.min(idealWorkers, 5, chunkCount)
+  let workerCount: number;
   
-  const chunksPerWorker = Math.ceil(chunkCount / workerCount)
-  const questionsPerWorker = Math.ceil(questionCount / workerCount)
-
+  switch (questionCount) {
+    case 10:
+      workerCount = 2;
+      break;
+    case 20:
+      workerCount = 4;
+      break;
+    case 30:
+      workerCount = 6;
+      break;
+    default:
+      // Fallback for any other amounts (shouldn't happen with UI dropdown)
+      workerCount = Math.min(Math.ceil(questionCount / 5), 6);
+      console.warn(`Unexpected question count: ${questionCount}, using ${workerCount} workers`);
+  }
+  
   return {
     workerCount,
-    chunksPerWorker, 
-    questionsPerWorker
+    chunksPerWorker: Math.ceil(chunkCount / workerCount),
+    questionsPerWorker: Math.ceil(questionCount / workerCount)
   }
 }
 
@@ -242,12 +253,12 @@ function createWorkerTasks(
     const task = {
       quizId,
       chunks: workerChunks,
-      metadata,
+      difficulty: metadata.difficulty,
+      topic: metadata.topic,
       questionCount: questionsForThisWorker,
       workerIndex: i
     };
     
-    console.log(`🛠️ Creating worker ${i}: ${workerChunks.length} chunks, ${questionsForThisWorker} questions`);
     tasks.push(task);
   }
 
@@ -279,11 +290,10 @@ async function spawnWorkers(tasks: WorkerTask[]): Promise<void> {
     })
 
     await sqs.send(command)
-    console.log(`📤 Spawned worker ${index + 1}/${tasks.length} for quiz ${task.quizId}`)
   })
 
   await Promise.all(promises)
-  console.log(`✅ All ${tasks.length} workers spawned successfully`)
+  console.log(`✅ Spawned ${tasks.length} workers for quiz ${tasks[0]?.quizId}`);
 }
 
 /**
@@ -298,8 +308,8 @@ function validateRequest(request: GenerateQuizRequest): string | null {
     return 'quizName is required'
   }
   
-  if (typeof request.questionCount !== 'number' || request.questionCount < 1 || request.questionCount > 50) {
-    return 'questionCount must be between 1 and 50'
+  if (typeof request.questionCount !== 'number' || ![10, 20, 30].includes(request.questionCount)) {
+    return 'questionCount must be 10, 20, or 30'
   }
   
   if (typeof request.minutes !== 'number' || request.minutes < 1 || request.minutes > 180) {

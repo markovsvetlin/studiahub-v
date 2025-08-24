@@ -72,30 +72,25 @@ export function parseQuizResponse(
   expectedCount: number
 ): QuizQuestion[] {
   try {
-    // Clean the response - remove any markdown or extra text
-    const jsonMatch = gptResponse.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) {
-      throw new Error('No valid JSON array found in GPT response');
+    // Try direct JSON parse first, fallback to regex extraction
+    let questions: any[];
+    try {
+      questions = JSON.parse(gptResponse);
+    } catch {
+      const jsonMatch = gptResponse.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) throw new Error('No valid JSON found in GPT response');
+      questions = JSON.parse(jsonMatch[0]);
     }
-
-    const questions = JSON.parse(jsonMatch[0]);
     
     if (!Array.isArray(questions)) {
       throw new Error('Response is not an array');
     }
 
-    if (questions.length !== expectedCount) {
-      console.warn(`Expected ${expectedCount} questions, got ${questions.length}`);
-    }
-
-    // Validate and enhance each question
+    // Validate and format each question
     return questions.map((q: any, index: number) => {
-      if (!q.question || !Array.isArray(q.options) || q.options.length !== 4) {
+      if (!q.question || !Array.isArray(q.options) || q.options.length !== 4 || 
+          typeof q.correctIndex !== 'number' || q.correctIndex < 0 || q.correctIndex > 3) {
         throw new Error(`Question ${index + 1} has invalid format`);
-      }
-
-      if (typeof q.correctIndex !== 'number' || q.correctIndex < 0 || q.correctIndex > 3) {
-        throw new Error(`Question ${index + 1} has invalid correctIndex: ${q.correctIndex}`);
       }
 
       return {
@@ -105,12 +100,11 @@ export function parseQuizResponse(
         correctIndex: q.correctIndex,
         difficulty: q.difficulty || 'medium',
         topic: q.topic
-      } as QuizQuestion;
+      };
     });
 
   } catch (error) {
     console.error('Failed to parse quiz response:', error);
-    console.error('GPT Response:', gptResponse);
     throw new Error(`Failed to parse quiz questions: ${error}`);
   }
 }
