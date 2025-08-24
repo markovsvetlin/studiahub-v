@@ -164,6 +164,15 @@ functions:
           path: /files/{id}/toggle
           method: PATCH
 
+  generateQuiz:
+    handler: src/handlers/quiz/generateQuiz.generateQuiz
+    timeout: 30
+    memorySize: 512
+    events:
+      - httpApi:
+          path: /quiz/generate
+          method: POST
+
   queueProcessor:
     handler: src/handlers/files/queue.process
     timeout: 900

@@ -2,7 +2,7 @@
  * Simple database utilities for files
  */
 
-import { PutCommand, UpdateCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { PutCommand, UpdateCommand, QueryCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../../db';
 import { FILES_TABLE } from '../constants';
@@ -86,4 +86,24 @@ export async function findFileByKey(key: string): Promise<any> {
   }));
   
   return result.Items?.[0] || null;
+}
+
+/**
+ * Get IDs of all enabled and ready files
+ */
+export async function getEnabledFileIds(): Promise<string[]> {
+  const result = await db.send(new ScanCommand({
+    TableName: FILES_TABLE,
+    FilterExpression: '#status = :status AND #isEnabled = :isEnabled',
+    ExpressionAttributeNames: { 
+      '#status': 'status',
+      '#isEnabled': 'isEnabled'
+    },
+    ExpressionAttributeValues: { 
+      ':status': 'ready',
+      ':isEnabled': true
+    }
+  }));
+  
+  return (result.Items || []).map(item => item.id);
 }

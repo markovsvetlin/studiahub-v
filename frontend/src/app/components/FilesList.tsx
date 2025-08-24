@@ -19,7 +19,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils'
 import { FileListItem, FileListProps, SortField, SortDirection } from '@/types/file'
 import QuizDrawer from './QuizDrawer'
-import { generateAndWaitForQuiz } from '../services/quiz'
 
 function formatBytes(bytes: number): string {
   const sizes = ['B', 'KB', 'MB', 'GB']
@@ -296,22 +295,20 @@ export default function FilesList({
             existingQuizNames={[]} // TODO: Pass actual existing quiz names if needed
             onGenerateQuiz={async (settings) => {
               console.log('Generating quiz with settings:', settings)
+              
               try {
-                const completedQuiz = await generateAndWaitForQuiz({
-                  mode: 'general', // Use general mode since it's working
-                  questionCount: settings.questions || 10,
-                  // Don't pass userId to use default namespace
-                  quizName: settings.quizName || 'My Quiz',
-                  topic: settings.topic || '',
-                  minutes: settings.minutes || 5,
-                  difficulty: settings.difficulty || 'medium'
+                const { quizService } = await import('../service/quiz')
+                
+                const response = await quizService.generateQuiz({
+                  focusArea: settings.topic || undefined,
+                  questionCount: settings.questionCount
                 })
                 
-                console.log('🎉 Quiz completed successfully!')
-                console.log('📋 Total questions:', completedQuiz.questions?.length)
-                console.log('📝 All questions:', completedQuiz.questions)
+                console.log('Quiz generated successfully:', response)
+                // TODO: Handle the quiz response - pass to quiz component or store in state
               } catch (error) {
-                console.error('❌ Quiz generation failed:', error)
+                console.error('Failed to generate quiz:', error)
+                // TODO: Show error notification to user
               }
             }}
           />
