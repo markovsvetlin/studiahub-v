@@ -20,7 +20,11 @@ if (!global.__dynamoClient) {
     })
   })
   
-  global.__dynamoClient = DynamoDBDocumentClient.from(client)
+  global.__dynamoClient = DynamoDBDocumentClient.from(client, {
+    marshallOptions: {
+      removeUndefinedValues: true
+    }
+  })
 }
 
 dynamoClient = global.__dynamoClient

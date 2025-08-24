@@ -4,17 +4,19 @@ import { FileListItem } from '@/types/file'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://oyehv715ef.execute-api.us-east-1.amazonaws.com'
 
-export function useFiles() {
+export function useFiles(userId?: string) {
   const [files, setFiles] = useState<FileListItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const fetchFiles = useCallback(async () => {
+    if (!userId) return
+    
     try {
       setIsLoading(true)
       setError(null)
       
-      const response = await fetch(`${API_BASE}/files`)
+      const response = await fetch(`${API_BASE}/files?userId=${encodeURIComponent(userId)}`)
       if (!response.ok) {
         throw new Error(`Failed to fetch files: ${response.status}`)
       }
@@ -32,7 +34,7 @@ export function useFiles() {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [userId])
 
   const toggleFileEnabled = useCallback(async (fileId: string, enabled: boolean) => {
     try {

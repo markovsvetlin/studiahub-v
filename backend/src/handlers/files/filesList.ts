@@ -17,15 +17,20 @@ const s3 = new S3Client({ region: AWS_REGION });
  */
 export async function list(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
   try {
+    const userId = event.queryStringParameters?.userId;
+    if (!userId) {
+      return createErrorResponse(400, 'userId query parameter required');
+    }
+
     const result = await db.send(new ScanCommand({
       TableName: FILES_TABLE,
-      // Only return files that are ready (processed)
-      FilterExpression: '#status = :status',
+      FilterExpression: '#status = :status AND userId = :userId',
       ExpressionAttributeNames: {
         '#status': 'status'
       },
       ExpressionAttributeValues: {
-        ':status': 'ready'
+        ':status': 'ready',
+        ':userId': userId
       }
     }));
 
@@ -116,10 +121,10 @@ export async function deleteFile(event: APIGatewayProxyEventV2): Promise<APIGate
       // Continue with other deletions even if S3 fails
     }
 
-    // Step 3: Delete from Pinecone
+    // Step 3: Delete from Pinecone (use userId from file record)
     try {
       await pineconeService.initialize();
-      await pineconeService.deleteFileChunks(fileId);
+      await pineconeService.deleteFileChunks(fileId, fileRecord.userId);
       console.log(`✅ Deleted chunks from Pinecone for file: ${fileId}`);
     } catch (pineconeError) {
       console.warn(`⚠️  Failed to delete from Pinecone: ${pineconeError}`);

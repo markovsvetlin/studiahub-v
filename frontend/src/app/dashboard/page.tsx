@@ -2,6 +2,7 @@
 import UploadDropzone from '../components/UploadDropzone'
 import FilesList from '../components/FilesList'
 import { useFiles } from '@/hooks/useFiles'
+import { useUser } from '@clerk/nextjs'
 
 export default function Dashboard() {
   return (
@@ -18,7 +19,16 @@ export default function Dashboard() {
 }
 
 function FilesSection() {
-  const { files, isLoading, error, toggleFileEnabled, deleteFile, refreshFiles } = useFiles()
+  const { user } = useUser()
+  const { files, isLoading, error, toggleFileEnabled, deleteFile, refreshFiles } = useFiles(user?.id)
+
+  if (!user) {
+    return (
+      <div className="max-w-4xl w-full p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-center">
+        Please sign in to upload and manage files
+      </div>
+    )
+  }
 
   if (error) {
     return (
@@ -30,7 +40,7 @@ function FilesSection() {
 
   return (
     <>
-      <UploadDropzone onUploadComplete={refreshFiles} />
+      <UploadDropzone userId={user.id} onUploadComplete={refreshFiles} />
       <FilesList
         files={files}
         onToggleEnabled={toggleFileEnabled}

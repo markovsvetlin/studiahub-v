@@ -6,10 +6,10 @@ const sqs = new SQSClient({ region: AWS_REGION });
 /**
  * Trigger file processing
  */
-export async function triggerFileProcessing(key: string): Promise<void> {
+export async function triggerFileProcessing(key: string, userId: string): Promise<void> {
   if (process.env.IS_OFFLINE) {
     const { processObject } = await import('../../handlers/files/processFile');
-    processObject(S3_BUCKET, key).catch(console.error);
+    processObject(S3_BUCKET, key, userId).catch(console.error);
     return;
   }
   if (!PROCESSING_QUEUE_URL) {
@@ -20,7 +20,7 @@ export async function triggerFileProcessing(key: string): Promise<void> {
   try {
     await sqs.send(new SendMessageCommand({
       QueueUrl: PROCESSING_QUEUE_URL,
-      MessageBody: JSON.stringify({ bucket: S3_BUCKET, key })
+      MessageBody: JSON.stringify({ bucket: S3_BUCKET, key, userId })
     }));
   } catch (error) {
     console.error('Failed to queue processing:', error);

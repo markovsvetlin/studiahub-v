@@ -17,7 +17,7 @@ const service = process.env.SERVICE || "studiahub-backend";
 
 const itemsTableName = `${service}-${stage}-items`;
 const filesTableName = `${service}-${stage}-files`;
-const quizTableName = `${service}-${stage}-quiz`;
+const quizTableName = `${service}-${stage}-quizzes`;
 
 const client = new DynamoDBClient({ region, endpoint });
 
@@ -93,7 +93,7 @@ async function main() {
     ],
     GlobalSecondaryIndexes: [
       {
-        IndexName: "userId-index",
+        IndexName: "user-index",
         KeySchema: [
           { AttributeName: "userId", KeyType: "HASH" },
         ],

@@ -10,6 +10,7 @@ import { FILES_TABLE } from '../constants';
 export interface FileRecord {
   id: string;
   key: string;
+  userId: string;
   status: 'uploading' | 'queued' | 'processing' | 'ready' | 'error';
   progress: number;
   totalChunks: number;
@@ -21,10 +22,11 @@ export interface FileRecord {
 /**
  * Create a new file record
  */
-export async function createFileRecord(key: string, status: FileRecord['status'] = 'uploading'): Promise<FileRecord> {
+export async function createFileRecord(key: string, userId: string, status: FileRecord['status'] = 'uploading'): Promise<FileRecord> {
   const record: FileRecord = {
     id: uuidv4(),
     key,
+    userId,
     status,
     progress: 0,
     totalChunks: 0,
@@ -89,20 +91,30 @@ export async function findFileByKey(key: string): Promise<any> {
 }
 
 /**
- * Get IDs of all enabled and ready files
+ * Get IDs of all enabled and ready files for a user
  */
-export async function getEnabledFileIds(): Promise<string[]> {
+export async function getEnabledFileIds(userId?: string): Promise<string[]> {
+  const filterExpression = userId 
+    ? '#status = :status AND #isEnabled = :isEnabled AND userId = :userId'
+    : '#status = :status AND #isEnabled = :isEnabled';
+    
+  const expressionAttributeValues: any = { 
+    ':status': 'ready',
+    ':isEnabled': true
+  };
+  
+  if (userId) {
+    expressionAttributeValues[':userId'] = userId;
+  }
+  
   const result = await db.send(new ScanCommand({
     TableName: FILES_TABLE,
-    FilterExpression: '#status = :status AND #isEnabled = :isEnabled',
+    FilterExpression: filterExpression,
     ExpressionAttributeNames: { 
       '#status': 'status',
       '#isEnabled': 'isEnabled'
     },
-    ExpressionAttributeValues: { 
-      ':status': 'ready',
-      ':isEnabled': true
-    }
+    ExpressionAttributeValues: expressionAttributeValues
   }));
   
   return (result.Items || []).map(item => item.id);

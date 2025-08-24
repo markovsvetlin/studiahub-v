@@ -17,7 +17,7 @@ import { Brain } from 'lucide-react'
 interface QuizSettings {
   quizName: string
   minutes: number
-  questions: number
+  questionCount: number
   difficulty: 'easy' | 'medium' | 'hard'
   topic: string
   additionalInstructions: string
@@ -38,7 +38,7 @@ export default function QuizDrawer({
   const [formData, setFormData] = useState<QuizSettings>({
     quizName: generateDefaultQuizName(existingQuizNames),
     minutes: 5,
-    questions: 10,
+    questionCount: 10,
     difficulty: 'medium',
     topic: '',
     additionalInstructions: ''
@@ -74,8 +74,8 @@ export default function QuizDrawer({
     }
 
     // Questions validation
-    if (formData.questions < 1 || formData.questions > 30) {
-      newErrors.questions = 'Questions must be between 1 and 30'
+    if (formData.questionCount < 1 || formData.questionCount > 30) {
+      newErrors.questionCount = 'Questions must be between 1 and 30'
     }
 
     // Topic validation (optional but with char limit)
@@ -100,7 +100,7 @@ export default function QuizDrawer({
       setFormData({
         quizName: generateDefaultQuizName(existingQuizNames),
         minutes: 5,
-        questions: 10,
+        questionCount: 10,
         difficulty: 'medium',
         topic: '',
         additionalInstructions: ''
@@ -175,12 +175,12 @@ export default function QuizDrawer({
                 type="number"
                 min="1"
                 max="30"
-                value={formData.questions}
-                onChange={(e) => updateFormData('questions', parseInt(e.target.value) || 1)}
-                className={errors.questions ? "border-red-500" : ""}
+                value={formData.questionCount}
+                onChange={(e) => updateFormData('questionCount', parseInt(e.target.value) || 1)}
+                className={errors.questionCount ? "border-red-500" : ""}
               />
-              {errors.questions && (
-                <p className="text-sm text-red-500">{errors.questions}</p>
+              {errors.questionCount && (
+                <p className="text-sm text-red-500">{errors.questionCount}</p>
               )}
             </div>
           </div>

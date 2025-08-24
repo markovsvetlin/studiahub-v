@@ -26,9 +26,9 @@ export async function generatePresignedUrl(event: APIGatewayProxyEventV2): Promi
       return createErrorResponse(400, 'Request body required');
     }
     
-    const { fileName, contentType, fileSize } = JSON.parse(event.body);
-    if (!fileName || !contentType) {
-      return createErrorResponse(400, 'fileName and contentType required');
+    const { fileName, contentType, fileSize, userId } = JSON.parse(event.body);
+    if (!fileName || !contentType || !userId) {
+      return createErrorResponse(400, 'fileName, contentType, and userId required');
     }
     
     if (!ALLOWED_CONTENT_TYPES.has(contentType)) {
@@ -39,10 +39,10 @@ export async function generatePresignedUrl(event: APIGatewayProxyEventV2): Promi
       return createErrorResponse(400, 'File too large');
     }
     
-    // Generate file key
+    // Generate user-specific file key
     const timestamp = Date.now();
     const cleanName = fileName.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-    const fileKey = `uploads/${timestamp}-${cleanName}`;
+    const fileKey = `uploads/${userId}/${timestamp}-${cleanName}`;
     
     // Generate presigned URL
     const command = new PutObjectCommand({
@@ -54,8 +54,8 @@ export async function generatePresignedUrl(event: APIGatewayProxyEventV2): Promi
     
     const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 3600 });
     
-    // Create file record
-    const fileRecord = await createFileRecord(fileKey, 'uploading');
+    // Create file record with userId
+    const fileRecord = await createFileRecord(fileKey, userId, 'uploading');
     
     return createSuccessResponse({
       uploadUrl,
@@ -76,9 +76,9 @@ export async function confirmUpload(event: APIGatewayProxyEventV2): Promise<APIG
       return createErrorResponse(400, 'Request body required');
     }
     
-    const { key } = JSON.parse(event.body);
-    if (!key) {
-      return createErrorResponse(400, 'File key required');
+    const { key, userId } = JSON.parse(event.body);
+    if (!key || !userId) {
+      return createErrorResponse(400, 'File key and userId required');
     }
     
     // Update file status
@@ -89,8 +89,8 @@ export async function confirmUpload(event: APIGatewayProxyEventV2): Promise<APIG
     
     await updateFileById(file.id, { status: 'queued' });
     
-    // Trigger processing
-    await triggerFileProcessing(key);
+    // Trigger processing with userId
+    await triggerFileProcessing(key, userId);
     
     return createSuccessResponse({
       fileId: file.id,

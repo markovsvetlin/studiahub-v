@@ -11,7 +11,7 @@ import { findFileByKey, updateFileProgress, updateFileById } from '../../utils/f
 /**
  * Main file processing function
  */
-export async function processObject(bucket: string, key: string): Promise<void> {
+export async function processObject(bucket: string, key: string, userId?: string): Promise<void> {
   try {
     // Update status to processing
     await updateFileProgress(key, 10, 'processing');
@@ -46,8 +46,9 @@ export async function processObject(bucket: string, key: string): Promise<void> 
       await updateFileById(file.id, { totalChunks: chunks.length });
     }
     
-    // Process embeddings
-    await processEmbeddings(file, chunks);
+    // Process embeddings with user namespace
+    const userNamespace = userId || file?.userId || 'default';
+    await processEmbeddings(file, chunks, userNamespace);
     
     // Mark as complete
     await updateFileProgress(key, 100, 'ready');
@@ -61,7 +62,7 @@ export async function processObject(bucket: string, key: string): Promise<void> 
 /**
  * Process embeddings for chunks with dynamic parallel processing
  */
-async function  processEmbeddings(file: any, chunks: any[]): Promise<void> {
+async function  processEmbeddings(file: any, chunks: any[], namespace: string = 'default'): Promise<void> {
   if (!chunks.length) return;
   
   // Initialize Pinecone
@@ -116,7 +117,7 @@ async function  processEmbeddings(file: any, chunks: any[]): Promise<void> {
         }
       }));
       
-      await pineconeService.upsertChunks(vectors);
+      await pineconeService.upsertChunks(vectors, namespace);
       return batch.length;
     });
     

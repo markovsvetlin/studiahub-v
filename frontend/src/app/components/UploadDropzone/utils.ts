@@ -42,14 +42,15 @@ function determineContentType(file: File): string {
   return 'application/octet-stream'
 }
 
-async function requestPresignedUrl(baseUrl: string, file: File): Promise<PresignedUrlResponse> {
+async function requestPresignedUrl(baseUrl: string, file: File, userId: string): Promise<PresignedUrlResponse> {
   const response = await fetch(`${baseUrl}/upload/presigned`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
       fileName: file.name,
       contentType: determineContentType(file),
-      fileSize: file.size
+      fileSize: file.size,
+      userId
     })
   })
   
@@ -73,11 +74,11 @@ async function uploadToS3(uploadUrl: string, file: File, contentType: string): P
   }
 }
 
-async function confirmUploadComplete(baseUrl: string, backendKey: string): Promise<void> {
+async function confirmUploadComplete(baseUrl: string, backendKey: string, userId: string): Promise<void> {
   const response = await fetch(`${baseUrl}/upload/confirm`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ key: backendKey })
+    body: JSON.stringify({ key: backendKey, userId })
   })
   
   if (!response.ok) {
@@ -88,6 +89,7 @@ async function confirmUploadComplete(baseUrl: string, backendKey: string): Promi
 
 export async function uploadToBackend(
   files: File[],
+  userId: string,
   updateProgress: (key: string, progress: number, status?: FileStatus) => void,
   onFileDone?: (localKey: string) => void
 ) {
@@ -100,7 +102,7 @@ export async function uploadToBackend(
       updateProgress(localFileKey, PROGRESS_UPLOAD_STARTED, 'processing')
       
       // Step 1: Request presigned URL
-      const presignedData = await requestPresignedUrl(baseUrl, file)
+      const presignedData = await requestPresignedUrl(baseUrl, file, userId)
       updateProgress(localFileKey, PROGRESS_PRESIGNED_OBTAINED, 'processing')
       
       // Step 2: Upload file directly to S3
@@ -109,7 +111,7 @@ export async function uploadToBackend(
       updateProgress(localFileKey, PROGRESS_S3_UPLOAD_COMPLETE, 'processing')
       
       // Step 3: Confirm upload and trigger processing
-      await confirmUploadComplete(baseUrl, presignedData.key)
+      await confirmUploadComplete(baseUrl, presignedData.key, userId)
       updateProgress(localFileKey, PROGRESS_PROCESSING_TRIGGERED, 'processing')
       
       // Start polling file status asynchronously

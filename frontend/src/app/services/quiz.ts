@@ -1,39 +1,55 @@
 type QuizData = {
-  mode: 'specific' | 'general'
-  query?: string
+  userId: string
   questionCount: number
-  userId?: string
   quizName: string
-  topic: string
   minutes: number
-  difficulty: 'easy' | 'medium' | 'hard';
+  difficulty: 'easy' | 'medium' | 'hard'
+  topic?: string
+  additionalInstructions?: string
 }
 
 type Question = {
-  questionText: string
+  id: string
+  question: string
   options: string[]
-  correctAnswer: number
-  explanation: string
+  correctIndex: number
   difficulty: 'easy' | 'medium' | 'hard'
+  topic?: string
+  confidence?: number
+  timeEstimate?: number
+  fileReference?: {
+    fileId: string
+    fileName: string
+    chunkId: string
+  }
 }
 
 type QuizStatus = {
-  id: string
-  mode: 'specific' | 'general'
-  query?: string
-  status: 'generating' | 'ready' | 'error'
+  quizId: string
+  status: 'processing' | 'ready' | 'error'
   progress: number
-  questionCount: number
+  metadata: {
+    quizName: string
+    questionCount: number
+    minutes: number
+    difficulty: 'easy' | 'medium' | 'hard'
+    topic?: string
+  }
   questions?: Question[]
+  workers?: {
+    total: number
+    completed: number
+  }
   createdAt: string
-  updatedAt: string
+  updatedAt?: string
+  completedAt?: string
   error?: string
-  estimatedTimeRemaining?: string
 }
 
 const apiUrl = process.env.NEXT_PUBLIC_API_BASE
 
 const generateQuiz = async (quizData: QuizData) => {
+  console.log('🚀 Starting quiz generation with data:', quizData)
   const response = await fetch(`${apiUrl}/quiz/generate`, {
     method: 'POST',
     body: JSON.stringify(quizData),
@@ -47,7 +63,7 @@ const generateQuiz = async (quizData: QuizData) => {
 }
 
 const getQuizStatus = async (quizId: string): Promise<QuizStatus> => {
-  const response = await fetch(`${apiUrl}/quiz/${quizId}`, {
+  const response = await fetch(`${apiUrl}/quiz/${quizId}/status`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json'
@@ -62,20 +78,24 @@ const getQuizStatus = async (quizId: string): Promise<QuizStatus> => {
   return data
 }
 
-const waitForQuizCompletion = async (quizId: string, maxWaitTime: number = 60000): Promise<QuizStatus> => {
+const waitForQuizCompletion = async (quizId: string, maxWaitTime: number = 120000): Promise<QuizStatus> => {
   const startTime = Date.now()
-  const pollInterval = 2000 // Check every 2 seconds
+  const pollInterval = 3000 // Check every 3 seconds
   
   console.log(`⏳ Waiting for quiz ${quizId} to complete...`)
   
   while (Date.now() - startTime < maxWaitTime) {
     try {
       const status = await getQuizStatus(quizId)
-      console.log(`📊 Quiz progress: ${status.progress}% (${status.status})`)
+      const progressInfo = status.workers 
+        ? `${status.progress}% (${status.workers.completed}/${status.workers.total} workers completed)`
+        : `${status.progress}%`
+      
+      console.log(`📊 Quiz progress: ${progressInfo} (${status.status})`)
       
       if (status.status === 'ready') {
         console.log('✅ Quiz completed successfully!')
-        console.log('📝 Questions:', status.questions)
+        console.log(`📝 Generated ${status.questions?.length || 0} questions`)
         return status
       }
       
@@ -96,7 +116,7 @@ const waitForQuizCompletion = async (quizId: string, maxWaitTime: number = 60000
 }
 
 const generateAndWaitForQuiz = async (quizData: QuizData): Promise<QuizStatus> => {
-  // Step 1: Start quiz generation
+
   const generateResponse = await generateQuiz(quizData)
   
   if (!generateResponse.quizId) {
@@ -109,11 +129,28 @@ const generateAndWaitForQuiz = async (quizData: QuizData): Promise<QuizStatus> =
   return completedQuiz
 }
 
+const getUserQuizzes = async (userId: string): Promise<any> => {
+  const response = await fetch(`${apiUrl}/quiz/user?userId=${userId}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+  
+  if (!response.ok) {
+    throw new Error(`Failed to get user quizzes: ${response.status}`)
+  }
+  
+  const data = await response.json()
+  return data
+}
+
 export { 
   generateQuiz, 
   getQuizStatus, 
   waitForQuizCompletion, 
   generateAndWaitForQuiz,
+  getUserQuizzes,
   type QuizData,
   type Question,
   type QuizStatus

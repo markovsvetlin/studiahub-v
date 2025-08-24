@@ -13,6 +13,8 @@ provider:
     S3_BUCKET: ${env:S3_BUCKET, '${self:service}-${self:provider.stage}-assets'}
     PROCESSING_QUEUE_URL:
       Ref: ProcessingQueue
+    QUIZ_QUEUE_URL:
+      Ref: QuizQueue
     OPENAI_API_KEY: ${env:OPENAI_API_KEY}
     PINECONE_API_KEY: ${env:PINECONE_API_KEY}
     PINECONE_ENVIRONMENT: ${env:PINECONE_ENVIRONMENT, 'us-east-1-aws'}
@@ -22,6 +24,7 @@ provider:
     STRIPE_ANNUAL_PRICE_ID: ${env:STRIPE_ANNUAL_PRICE_ID}
     ITEMS_TABLE: ${self:service}-${self:provider.stage}-items
     FILES_TABLE: ${self:service}-${self:provider.stage}-files
+    QUIZ_TABLE: ${self:service}-${self:provider.stage}-quizzes
   iam:
     role:
       statements:
@@ -37,6 +40,8 @@ provider:
             - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.ITEMS_TABLE}
             - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.FILES_TABLE}
             - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.FILES_TABLE}/index/*
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.QUIZ_TABLE}
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.QUIZ_TABLE}/index/*
         - Effect: Allow
           Action:
             - s3:PutObject
@@ -67,6 +72,18 @@ provider:
             - sqs:GetQueueAttributes
           Resource:
             - { "Fn::GetAtt": [ ProcessingQueue, Arn ] }
+        - Effect: Allow
+          Action:
+            - sqs:SendMessage
+          Resource:
+            - { "Fn::GetAtt": [ QuizQueue, Arn ] }
+        - Effect: Allow
+          Action:
+            - sqs:ReceiveMessage
+            - sqs:DeleteMessage
+            - sqs:GetQueueAttributes
+          Resource:
+            - { "Fn::GetAtt": [ QuizQueue, Arn ] }
 
 plugins:
   - serverless-esbuild
@@ -155,12 +172,41 @@ functions:
 
   generateQuiz:
     handler: src/handlers/quiz/generateQuiz.generateQuiz
-    timeout: 30
-    memorySize: 512
+    timeout: 25
+    memorySize: 384
     events:
       - httpApi:
           path: /quiz/generate
           method: POST
+
+  quizStatus:
+    handler: src/handlers/quiz/quizStatus.getQuizStatus
+    timeout: 8
+    memorySize: 192
+    events:
+      - httpApi:
+          path: /quiz/{id}/status
+          method: GET
+
+  userQuizzes:
+    handler: src/handlers/quiz/quizStatus.getUserQuizzes
+    timeout: 10
+    memorySize: 256
+    events:
+      - httpApi:
+          path: /quiz/user
+          method: GET
+
+  quizWorker:
+    handler: src/handlers/quiz/quizWorker.handler
+    timeout: 240
+    memorySize: 768
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt: [ QuizQueue, Arn ]
+          batchSize: 1
+          maximumBatchingWindow: 0
 
   queueProcessor:
     handler: src/handlers/files/queue.process
@@ -194,6 +240,27 @@ resources:
             Projection:
               ProjectionType: ALL
         BillingMode: PAY_PER_REQUEST
+
+    QuizTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.QUIZ_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: user-index
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        BillingMode: PAY_PER_REQUEST
         
     ProcessingDLQ:
       Type: AWS::SQS::Queue
@@ -207,6 +274,20 @@ resources:
         VisibilityTimeout: 900
         RedrivePolicy:
           deadLetterTargetArn: { "Fn::GetAtt": [ ProcessingDLQ, Arn ] }
+          maxReceiveCount: 3
+
+    QuizDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${self:provider.stage}-quiz-dlq
+        MessageRetentionPeriod: 1209600
+    QuizQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${self:provider.stage}-quiz
+        VisibilityTimeout: 300
+        RedrivePolicy:
+          deadLetterTargetArn: { "Fn::GetAtt": [ QuizDLQ, Arn ] }
           maxReceiveCount: 3
 
 

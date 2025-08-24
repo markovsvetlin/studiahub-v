@@ -19,6 +19,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils'
 import { FileListItem, FileListProps, SortField, SortDirection } from '@/types/file'
 import QuizDrawer from './QuizDrawer'
+import { useUser } from "@clerk/nextjs";
 
 function formatBytes(bytes: number): string {
   const sizes = ['B', 'KB', 'MB', 'GB']
@@ -202,7 +203,8 @@ export default function FilesList({
 }: FileListProps) {
   const [internalSortField, setInternalSortField] = useState<SortField>(sortField)
   const [internalSortDirection, setInternalSortDirection] = useState<SortDirection>(sortDirection)
-
+  const { user } = useUser();
+console.log('User:', user);
   const currentSortField = onSort ? sortField : internalSortField
   const currentSortDirection = onSort ? sortDirection : internalSortDirection
 
@@ -297,11 +299,15 @@ export default function FilesList({
               console.log('Generating quiz with settings:', settings)
               
               try {
-                const { quizService } = await import('../service/quiz')
-                
-                const response = await quizService.generateQuiz({
-                  focusArea: settings.topic || undefined,
-                  questionCount: settings.questionCount
+                const { generateAndWaitForQuiz } = await import('../services/quiz')
+              
+                const response = await generateAndWaitForQuiz({
+                  userId: user?.id || '',
+                  questionCount: settings.questionCount,
+                  quizName: settings.topic || 'Generated Quiz',
+                  minutes: Math.ceil(settings.questionCount * 1.5),
+                  difficulty: 'medium',
+                  topic: settings.topic || undefined
                 })
                 
                 console.log('Quiz generated successfully:', response)

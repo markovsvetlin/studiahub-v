@@ -8,6 +8,7 @@ import { FileList } from './FileList'
 import { formatBytes, makeFileKey, uploadToBackend } from './utils'
 
 export type UploadDropzoneProps = {
+  userId: string
   onFilesAdded?: (files: File[]) => void
   onChange?: (files: File[]) => void
   onUploadComplete?: () => void
@@ -17,6 +18,7 @@ export type UploadDropzoneProps = {
 }
 
 export default function UploadDropzone({
+  userId,
   onFilesAdded,
   onChange,
   onUploadComplete,
@@ -99,7 +101,7 @@ export default function UploadDropzone({
       selectedFiles.forEach(f => { initial[makeKey(f)] = { progress: 0, status: 'idle' } })
       setFileProgressByKey(initial)
 
-      await uploadToBackend(selectedFiles, (k: string, p: number, s?: 'processing' | 'done' | 'error') => setProgress(k, p, s))
+      await uploadToBackend(selectedFiles, userId, (k: string, p: number, s?: 'processing' | 'done' | 'error') => setProgress(k, p, s))
     } finally {
       // keep submitting state until all visible rows are done
       cleanupInterval = setInterval(() => {
