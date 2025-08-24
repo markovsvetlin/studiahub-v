@@ -21,6 +21,7 @@ import { FileListItem, FileListProps, SortField, SortDirection } from '@/types/f
 import { useUser } from "@clerk/nextjs";
 import QuizDrawer from './QuizDrawer'
 import QuizQuestions from './QuizQuestions'
+import QuizList from './QuizList'
 import { useQuiz } from '../hooks/useQuiz'
 
 function formatBytes(bytes: number): string {
@@ -215,7 +216,11 @@ export default function FilesList({
     setShowQuizQuestions,
     showQuizSettings,
     setShowQuizSettings,
-    handleGenerateQuiz
+    handleGenerateQuiz,
+    userQuizzes,
+    isLoadingQuizzes,
+    deleteQuiz,
+    retakeQuiz
   } = useQuiz(user?.id)
   const currentSortField = onSort ? sortField : internalSortField
   const currentSortDirection = onSort ? sortDirection : internalSortDirection
@@ -283,7 +288,7 @@ export default function FilesList({
 
   return (
     <>
-    <Card className="max-w-4xl w-full relative">
+      <Card className="max-w-4xl w-full relative">
       {/* Loading Overlay */}
       {isGenerating && (
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
@@ -405,14 +410,22 @@ export default function FilesList({
           ))}
         </div>
       </CardContent>
-    </Card>
+      </Card>
     
-    {/* Quiz Questions Drawer */}
-    <QuizQuestions 
-      open={showQuizQuestions}
-      onOpenChange={setShowQuizQuestions}
-      quizData={quizData}
-    />
-  </>
+      {/* Quiz List Section */}
+      <QuizList 
+        quizzes={userQuizzes}
+        isLoading={isLoadingQuizzes}
+        onDeleteQuiz={deleteQuiz}
+        onRetakeQuiz={retakeQuiz}
+      />
+    
+      {/* Quiz Questions Drawer */}
+      <QuizQuestions 
+        open={showQuizQuestions}
+        onOpenChange={setShowQuizQuestions}
+        quizData={quizData}
+      />
+    </>
   )
 }

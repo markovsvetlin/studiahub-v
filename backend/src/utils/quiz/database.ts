@@ -153,7 +153,7 @@ export async function markQuizError(quizId: string, error: string): Promise<void
 /**
  * Get user's quizzes (for history/listing)
  */
-export async function getUserQuizzes(userId: string, limit = 20): Promise<QuizRecord[]> {
+export async function getUserQuizzes(userId: string, limit = 100): Promise<QuizRecord[]> {
   const result = await db.send(new QueryCommand({
     TableName: QUIZ_TABLE,
     IndexName: 'user-index',

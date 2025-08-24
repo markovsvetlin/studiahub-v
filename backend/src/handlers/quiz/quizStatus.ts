@@ -67,22 +67,33 @@ export async function getQuizStatus(event: APIGatewayProxyEventV2): Promise<APIG
 export async function getUserQuizzes(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
   try {
     const userId = event.queryStringParameters?.userId
+    const limitParam = event.queryStringParameters?.limit
+    const limit = limitParam ? parseInt(limitParam) : 100
+    
     if (!userId) {
       return createErrorResponse(400, 'userId query parameter required')
     }
 
-    const quizzes = await dbGetUserQuizzes(userId)
+    const quizzes = await dbGetUserQuizzes(userId, limit)
     
-    // Return summary info only (not full questions)
-    const summaries = quizzes.map(quiz => ({
-      quizId: quiz.id,
-      quizName: quiz.metadata.quizName,
-      status: quiz.status,
-      progress: quiz.status === 'ready' ? 100 : 0,
-      questionCount: quiz.metadata.questionCount,
-      createdAt: quiz.createdAt,
-      completedAt: quiz.completedAt
-    }))
+    console.log(`📝 Found ${quizzes.length} quizzes for user ${userId}`)
+    console.log('First quiz sample:', quizzes[0])
+    
+    // Return complete quiz data including questions
+    const summaries = quizzes.map(quiz => {
+      console.log(`Processing quiz ${quiz.id} with ${quiz.questions?.length || 0} questions`)
+      return {
+        quizId: quiz.id,
+        quizName: quiz.metadata.quizName,
+        status: quiz.status,
+        progress: quiz.status === 'ready' ? 100 : 0,
+        questionCount: quiz.metadata.questionCount,
+        createdAt: quiz.createdAt,
+        completedAt: quiz.completedAt,
+        metadata: quiz.metadata,
+        questions: quiz.questions || []
+      }
+    })
 
     return createSuccessResponse({ userId, quizzes: summaries })
 

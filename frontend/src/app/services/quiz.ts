@@ -139,11 +139,19 @@ interface UserQuizzesResponse {
     questionCount: number;
     createdAt: string;
     completedAt?: string;
+    metadata?: {
+      quizName: string;
+      questionCount: number;
+      minutes: number;
+      difficulty: 'easy' | 'medium' | 'hard';
+      topic?: string;
+    };
+    questions?: Question[];
   }>;
 }
 
-const getUserQuizzes = async (userId: string): Promise<UserQuizzesResponse> => {
-  const response = await fetch(`${apiUrl}/quiz/user?userId=${userId}`, {
+const getUserQuizzes = async (userId: string, limit: number = 100): Promise<UserQuizzesResponse> => {
+  const response = await fetch(`${apiUrl}/quiz/user?userId=${userId}&limit=${limit}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json'

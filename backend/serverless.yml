@@ -197,6 +197,15 @@ functions:
           path: /quiz/user
           method: GET
 
+  deleteQuiz:
+    handler: src/handlers/quiz/deleteQuiz.deleteQuiz
+    timeout: 8
+    memorySize: 192
+    events:
+      - httpApi:
+          path: /quiz/{id}
+          method: DELETE
+
   quizWorker:
     handler: src/handlers/quiz/quizWorker.handler
     timeout: 240
