@@ -10,7 +10,8 @@ import {
   Database,
   Calendar,
   HardDrive,
-  Brain
+  Brain,
+  MessageCircle
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -23,6 +24,7 @@ import QuizDrawer from './QuizDrawer'
 import QuizQuestions from './QuizQuestions'
 import QuizList from './QuizList'
 import { useQuiz } from '../hooks/useQuiz'
+import ChatInterface from './ChatInterface'
 
 function formatBytes(bytes: number): string {
   const sizes = ['B', 'KB', 'MB', 'GB']
@@ -208,6 +210,9 @@ export default function FilesList({
   const [internalSortField, setInternalSortField] = useState<SortField>(sortField)
   const [internalSortDirection, setInternalSortDirection] = useState<SortDirection>(sortDirection)
   
+  // Chat state
+  const [showChat, setShowChat] = useState(false)
+  
   // Quiz management
   const {
     isGenerating,
@@ -323,31 +328,47 @@ export default function FilesList({
             </div>
           </div>
           
-          <QuizDrawer
-            trigger={
-              <Button 
-                size="lg" 
-                className={`flex items-center gap-2 transition-all duration-200 ${
-                  isGenerating 
-                    ? 'bg-indigo-500 hover:bg-indigo-500 animate-pulse' 
-                    : 'bg-indigo-600 hover:bg-indigo-700'
-                }`}
-                disabled={isGenerating}
-              >
-                {isGenerating ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <Brain className="h-5 w-5" />
-                )}
-                {isGenerating ? 'Generating...' : 'Generate Quiz'}
-              </Button>
-            }
-            existingQuizNames={[]}
-            onGenerateQuiz={handleGenerateQuiz}
-            isGenerating={isGenerating}
-            open={showQuizSettings}
-            onOpenChange={setShowQuizSettings}
-          />
+          <div className="flex items-center gap-3">
+            <Button 
+              size="lg" 
+              onClick={() => setShowChat(true)}
+              disabled={stats.active === 0}
+              className={`flex items-center gap-2 transition-all duration-200 ${
+                stats.active === 0
+                  ? 'bg-neutral-600 hover:bg-neutral-600 cursor-not-allowed'
+                  : 'bg-green-600 hover:bg-green-700'
+              }`}
+            >
+              <MessageCircle className="h-5 w-5" />
+              Chat
+            </Button>
+            
+            <QuizDrawer
+              trigger={
+                <Button 
+                  size="lg" 
+                  className={`flex items-center gap-2 transition-all duration-200 ${
+                    isGenerating 
+                      ? 'bg-indigo-500 hover:bg-indigo-500 animate-pulse' 
+                      : 'bg-indigo-600 hover:bg-indigo-700'
+                  }`}
+                  disabled={isGenerating}
+                >
+                  {isGenerating ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Brain className="h-5 w-5" />
+                  )}
+                  {isGenerating ? 'Generating...' : 'Generate Quiz'}
+                </Button>
+              }
+              existingQuizNames={[]}
+              onGenerateQuiz={handleGenerateQuiz}
+              isGenerating={isGenerating}
+              open={showQuizSettings}
+              onOpenChange={setShowQuizSettings}
+            />
+          </div>
         </div>
 
         {/* Stats Row */}
@@ -425,6 +446,14 @@ export default function FilesList({
         open={showQuizQuestions}
         onOpenChange={setShowQuizQuestions}
         quizData={quizData}
+      />
+
+      {/* Chat Interface */}
+      <ChatInterface
+        isOpen={showChat}
+        onOpenChange={setShowChat}
+        userId={user?.id}
+        hasEnabledFiles={stats.active > 0}
       />
     </>
   )

@@ -7,14 +7,21 @@ import { APIGatewayProxyEventV2, APIGatewayProxyResultV2, APIGatewayProxyResult 
 /**
  * Creates a standardized error response for API Gateway
  * @param statusCode - HTTP status code
- * @param error - Error message
+ * @param error - Error message or error object
  * @returns Formatted API Gateway response
  */
-export function createErrorResponse(statusCode: number, error: string): APIGatewayProxyResultV2 {
+export function createErrorResponse(statusCode: number, error: string | object): APIGatewayProxyResultV2 {
+  const errorBody = typeof error === 'string' ? { message: error } : error
+  
   return {
     statusCode,
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ ok: false, error })
+    headers: { 
+      'content-type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With'
+    },
+    body: JSON.stringify({ ok: false, ...errorBody })
   };
 }
 
@@ -27,7 +34,12 @@ export function createErrorResponse(statusCode: number, error: string): APIGatew
 export function createSuccessResponse(data: any, statusCode: number = 200): APIGatewayProxyResultV2 {
   return {
     statusCode,
-    headers: { 'content-type': 'application/json' },
+    headers: { 
+      'content-type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With'
+    },
     body: JSON.stringify({ ok: true, ...data })
   };
 }

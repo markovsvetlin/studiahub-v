@@ -157,7 +157,7 @@ export async function retrieveChunksForQuiz(options: ChunkRetrievalOptions): Pro
     await pineconeService.initialize()
     
     // Get enabled files for the user
-    const enabledFileIds = await getEnabledFileIds(userId)
+    const enabledFileIds = await getEnabledFileIds(userId || '')
     if (enabledFileIds.length === 0) {
       throw new Error('No enabled files found. Please enable at least one file in the context pool.')
     }

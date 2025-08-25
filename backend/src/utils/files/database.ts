@@ -133,3 +133,26 @@ export async function getUserReadyFiles(userId: string): Promise<FileRecord[]> {
   
   return (result.Items as FileRecord[]) || [];
 }
+
+/**
+ * Get user's enabled files (for chat context)
+ */
+export async function getUserEnabledFiles(userId: string): Promise<FileRecord[]> {
+  const result = await db.send(new QueryCommand({
+    TableName: FILES_TABLE,
+    IndexName: 'user-status-index',
+    KeyConditionExpression: 'userId = :userId AND #status = :status',
+    FilterExpression: '#isEnabled = :isEnabled',
+    ExpressionAttributeNames: { 
+      '#status': 'status',
+      '#isEnabled': 'isEnabled'
+    },
+    ExpressionAttributeValues: {
+      ':userId': userId,
+      ':status': 'ready',
+      ':isEnabled': true
+    }
+  }));
+  
+  return (result.Items as FileRecord[]) || [];
+}

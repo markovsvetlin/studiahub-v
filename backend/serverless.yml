@@ -25,6 +25,8 @@ provider:
     ITEMS_TABLE: ${self:service}-${self:provider.stage}-items
     FILES_TABLE: ${self:service}-${self:provider.stage}-files
     QUIZ_TABLE: ${self:service}-${self:provider.stage}-quizzes
+    CONVERSATIONS_TABLE: ${self:service}-${self:provider.stage}-conversations
+    MESSAGES_TABLE: ${self:service}-${self:provider.stage}-messages
   iam:
     role:
       statements:
@@ -42,6 +44,10 @@ provider:
             - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.FILES_TABLE}/index/*
             - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.QUIZ_TABLE}
             - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.QUIZ_TABLE}/index/*
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.CONVERSATIONS_TABLE}
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.CONVERSATIONS_TABLE}/index/*
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.MESSAGES_TABLE}
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.MESSAGES_TABLE}/index/*
         - Effect: Allow
           Action:
             - s3:PutObject
@@ -206,6 +212,51 @@ functions:
           path: /quiz/{id}
           method: DELETE
 
+  chatSendMessage:
+    handler: src/handlers/chat/sendMessage.sendMessage
+    timeout: 45
+    memorySize: 1024
+    events:
+      - httpApi:
+          path: /chat/messages
+          method: POST
+
+  chatGetMessages:
+    handler: src/handlers/chat/getMessages.getMessages
+    timeout: 10
+    memorySize: 512
+    events:
+      - httpApi:
+          path: /chat/{conversationId}/messages
+          method: GET
+
+  chatGetConversations:
+    handler: src/handlers/chat/getConversations.getConversations
+    timeout: 10
+    memorySize: 256
+    events:
+      - httpApi:
+          path: /chat/conversations
+          method: GET
+
+  chatDeleteConversation:
+    handler: src/handlers/chat/getConversations.deleteConversation
+    timeout: 5
+    memorySize: 256
+    events:
+      - httpApi:
+          path: /chat/conversations/{conversationId}
+          method: DELETE
+
+  chatGenerateTitle:
+    handler: src/handlers/chat/chatTitle.generateTitle
+    timeout: 15
+    memorySize: 512
+    events:
+      - httpApi:
+          path: /chat/conversations/{conversationId}/title
+          method: POST
+
   quizWorker:
     handler: src/handlers/quiz/quizWorker.handler
     timeout: 240
@@ -281,6 +332,58 @@ resources:
           - IndexName: user-index
             KeySchema:
               - AttributeName: userId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        BillingMode: PAY_PER_REQUEST
+
+    ConversationsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.CONVERSATIONS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: conversationId
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: lastMessageAt
+            AttributeType: N
+        KeySchema:
+          - AttributeName: conversationId
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: user-conversations-index
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+              - AttributeName: lastMessageAt
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        BillingMode: PAY_PER_REQUEST
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+
+    MessagesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.MESSAGES_TABLE}
+        AttributeDefinitions:
+          - AttributeName: conversationId
+            AttributeType: S
+          - AttributeName: timestamp
+            AttributeType: N
+          - AttributeName: messageId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: conversationId
+            KeyType: HASH
+          - AttributeName: timestamp
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: message-id-index
+            KeySchema:
+              - AttributeName: messageId
                 KeyType: HASH
             Projection:
               ProjectionType: ALL
