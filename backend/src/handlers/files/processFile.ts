@@ -6,7 +6,7 @@ import { extractTextFromFile } from '../../services/files/textExtraction';
 import { simpleSemanticChunk } from '../../services/files/chunking';
 import { embedOpenAI } from '../../services/files/embeddings';
 import { pineconeService } from '../../services/files/pinecone';
-import { findFileByKey, updateFileProgress, updateFileById } from '../../utils/files/database';
+import { findFileByKey, updateFileProgress, updateFileById, updateFileError } from '../../utils/files/database';
 
 /**
  * Main file processing function
@@ -17,7 +17,7 @@ export async function processObject(bucket: string, key: string, userId?: string
     await updateFileProgress(key, 10, 'processing');
     
     // Extract text from file
-    const pages = await extractTextFromFile(bucket, key);
+    const pages = await extractTextFromFile(bucket, key, userId);
     await updateFileProgress(key, 40);
     
     // Create chunks with guaranteed complete coverage
@@ -54,7 +54,8 @@ export async function processObject(bucket: string, key: string, userId?: string
     await updateFileProgress(key, 100, 'ready');
   } catch (error) {
     console.error('Processing failed:', error);
-    await updateFileProgress(key, 0, 'error');
+    const errorMessage = error instanceof Error ? error.message : 'Unknown processing error';
+    await updateFileError(key, errorMessage);
     throw error;
   }
 }

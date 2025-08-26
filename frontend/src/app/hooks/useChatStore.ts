@@ -1,5 +1,6 @@
 'use client'
 import { useState, useCallback, useRef, useMemo } from 'react'
+import { toast } from 'sonner'
 import { 
   sendMessage, 
   getMessages, 
@@ -11,6 +12,7 @@ import {
   type SendMessageRequest,
   ChatApiError
 } from '../services/chatApi'
+import { useUsageContext } from '@/contexts/UsageContext'
 
 // Normalized state structure
 interface ChatState {
@@ -65,6 +67,8 @@ const initialState: ChatState = {
 }
 
 export function useChatStore(userId?: string) {
+  const { refreshUsage } = useUsageContext()
+
   const [state, setState] = useState<ChatState>(initialState)
   const optimisticIdCounter = useRef(0)
 
@@ -377,6 +381,9 @@ export function useChatStore(userId?: string) {
         }
       })
 
+      // Refresh usage after successful message
+      refreshUsage()
+
       // Generate title for new conversation asynchronously (don't await)
       if (response.isNewConversation) {
         generateConversationTitle(response.conversationId, userId)
@@ -400,6 +407,14 @@ export function useChatStore(userId?: string) {
 
     } catch (error) {
       console.error('Failed to send message:', error)
+      
+      // Check for usage limit errors
+      if (error instanceof Error && error.message.includes('Usage limit exceeded')) {
+        toast.error('Message Failed - Usage Limit Exceeded', {
+          description: error.message,
+          duration: 8000
+        })
+      }
       
       // Remove optimistic message and show error
       setState(prev => {

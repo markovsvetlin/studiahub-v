@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { generateAndWaitForQuiz, getUserQuizzes, getQuizStatus, type QuizStatus } from '../services/quiz'
 import { type QuizSettings } from '../components/QuizDrawer'
 import { toast } from 'sonner'
+import { useUsageContext } from '@/contexts/UsageContext'
 
 interface QuizListItem {
   quizId: string
@@ -29,6 +30,8 @@ interface QuizListItem {
 }
 
 export function useQuiz(userId: string | undefined) {
+  const { refreshUsage } = useUsageContext()
+
   const [isGenerating, setIsGenerating] = useState(false)
   const [quizData, setQuizData] = useState<QuizStatus | null>(null)
   const [showQuizQuestions, setShowQuizQuestions] = useState(false)
@@ -133,11 +136,22 @@ export function useQuiz(userId: string | undefined) {
       toast.success('Quiz generated successfully!', {
         description: `Created ${response.questions?.length || settings.questionCount} questions`
       })
+
+      // Refresh usage after successful quiz generation
+      refreshUsage()
       
     } catch (error) {
-      toast.error('Failed to generate quiz', {
-        description: error instanceof Error ? error.message : 'Please try again or check your documents'
-      })
+      // Check for usage limit errors
+      if (error instanceof Error && error.message.includes('Usage limit exceeded')) {
+        toast.error('Quiz Generation Failed - Usage Limit Exceeded', {
+          description: error.message,
+          duration: 8000
+        })
+      } else {
+        toast.error('Failed to generate quiz', {
+          description: error instanceof Error ? error.message : 'Please try again or check your documents'
+        })
+      }
     } finally {
       setIsGenerating(false)
     }

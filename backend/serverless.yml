@@ -22,11 +22,18 @@ provider:
     STRIPE_WEBHOOK_SECRET: ${env:STRIPE_WEBHOOK_SECRET}
     STRIPE_MONTHLY_PRICE_ID: ${env:STRIPE_MONTHLY_PRICE_ID}
     STRIPE_ANNUAL_PRICE_ID: ${env:STRIPE_ANNUAL_PRICE_ID}
+    FREE_TIER_WORDS_LIMIT: ${env:FREE_TIER_WORDS_LIMIT, '100000'}
+    FREE_TIER_QUESTIONS_LIMIT: ${env:FREE_TIER_QUESTIONS_LIMIT, '50'}
+    FREE_TIER_TOKENS_LIMIT: ${env:FREE_TIER_TOKENS_LIMIT, '50000'}
+    PRO_TIER_WORDS_LIMIT: ${env:PRO_TIER_WORDS_LIMIT, '1000000'}
+    PRO_TIER_QUESTIONS_LIMIT: ${env:PRO_TIER_QUESTIONS_LIMIT, '500'}
+    PRO_TIER_TOKENS_LIMIT: ${env:PRO_TIER_TOKENS_LIMIT, '500000'}
     ITEMS_TABLE: ${self:service}-${self:provider.stage}-items
     FILES_TABLE: ${self:service}-${self:provider.stage}-files
     QUIZ_TABLE: ${self:service}-${self:provider.stage}-quizzes
     CONVERSATIONS_TABLE: ${self:service}-${self:provider.stage}-conversations
     MESSAGES_TABLE: ${self:service}-${self:provider.stage}-messages
+    USAGE_TABLE: ${self:service}-${self:provider.stage}-usage
   iam:
     role:
       statements:
@@ -48,6 +55,7 @@ provider:
             - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.CONVERSATIONS_TABLE}/index/*
             - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.MESSAGES_TABLE}
             - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.MESSAGES_TABLE}/index/*
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USAGE_TABLE}
         - Effect: Allow
           Action:
             - s3:PutObject
@@ -257,6 +265,15 @@ functions:
           path: /chat/conversations/{conversationId}/title
           method: POST
 
+  getUserUsage:
+    handler: src/handlers/usage/getUsage.getUserUsageHandler
+    timeout: 10
+    memorySize: 256
+    events:
+      - httpApi:
+          path: /usage/{userId}
+          method: GET
+
   quizWorker:
     handler: src/handlers/quiz/quizWorker.handler
     timeout: 240
@@ -387,6 +404,18 @@ resources:
                 KeyType: HASH
             Projection:
               ProjectionType: ALL
+        BillingMode: PAY_PER_REQUEST
+
+    UsageTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.USAGE_TABLE}
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
         BillingMode: PAY_PER_REQUEST
         
     ProcessingDLQ:

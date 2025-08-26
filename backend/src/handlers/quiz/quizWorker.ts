@@ -13,6 +13,7 @@ import {
   QuizMetadata 
 } from '../../utils/quiz/database';
 import { markWorkerCompleted } from '../../utils/quiz/completionTracker';
+import { incrementQuestionsGenerated } from '../../utils/usage/database';
 
 interface WorkerTask {
   quizId: string
@@ -67,6 +68,13 @@ async function processWorkerTask(record: SQSRecord): Promise<void> {
     const dbStartTime = Date.now();
     await addQuestionsToQuiz(quizId, questions);
     const dbDuration = Date.now() - dbStartTime;
+    
+    // Increment usage for this batch
+    const quiz = await getQuizRecord(quizId);
+    if (quiz?.userId) {
+      await incrementQuestionsGenerated(quiz.userId, questions.length);
+      console.log(`✅ Updated user ${quiz.userId} question usage: +${questions.length} questions`);
+    }
     
     // Check if all workers are complete
     const isAllComplete = await markWorkerCompleted(quizId);

@@ -7,6 +7,7 @@ import { createConversation, updateConversationMetrics, getConversation } from '
 import { createMessage, getConversationContext } from '../../utils/chat/messages'
 import { prepareChatContext } from '../../services/chat/chatService'
 import { generateChatResponse } from '../../services/chat/gptService'
+import { validateUsage, incrementTokensUsed } from '../../utils/usage/database'
 import { v4 as uuidv4 } from 'uuid'
 
 interface CompensatingAction {
@@ -111,11 +112,23 @@ export const sendMessage: APIGatewayProxyHandlerV2 = async (event) => {
 
     console.log(`✅ Created user message: ${userMessage.messageId}`)
 
+    // Validate token usage before generating response
+    // Estimate tokens (we'll validate with actual usage after)
+    const estimatedTokens = 3000; // Conservative estimate
+    const tokenValidation = await validateUsage(userId, 'tokens', estimatedTokens);
+    if (!tokenValidation.canProceed) {
+      return createErrorResponse(429, tokenValidation.message!);
+    }
+    
     // Generate AI response
     console.log(`🤖 Generating AI response...`)
     const aiResponse = await generateChatResponse(chatContext)
     
     console.log(`✅ AI response generated: ${aiResponse.tokenUsage.total} tokens`)
+    
+    // Increment actual token usage
+    await incrementTokensUsed(userId, aiResponse.tokenUsage.total);
+    console.log(`✅ Updated user ${userId} token usage: +${aiResponse.tokenUsage.total} tokens`);
 
     // Create AI message
     const aiMessage = await createMessage(

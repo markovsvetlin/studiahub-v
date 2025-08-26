@@ -19,6 +19,7 @@ interface FileStatusResponse {
   file?: {
     progress?: number
     status?: 'queued' | 'processing' | 'ready' | 'error'
+    errorMessage?: string
   }
 }
 
@@ -122,6 +123,13 @@ export async function uploadToBackend(
     } catch (error) {
       console.error(`Upload failed for ${file.name}:`, error)
       updateProgress(localFileKey, PROGRESS_COMPLETED, 'error')
+      
+      // Show user-friendly error toast for upload failures (not processing failures)
+      const { toast } = await import('sonner')
+      toast.error('Upload Failed', {
+        description: `Failed to upload ${file.name}. Please try again.`,
+        duration: 5000
+      })
     }
   }
 }
@@ -155,6 +163,30 @@ async function pollFileStatus(
         if (fileInfo) {
           const currentProgress = typeof fileInfo.progress === 'number' ? fileInfo.progress : 0
           const fileStatus = fileInfo.status
+          
+          // Handle error status
+          if (fileStatus === 'error') {
+            updateProgress(localKey, 0, 'error')
+            
+            // Show error notification with specific message
+            const errorMessage = fileInfo.errorMessage || 'File processing failed'
+            const { toast } = await import('sonner')
+            
+            if (errorMessage.includes('Usage limit exceeded')) {
+              toast.error('Upload Failed - Usage Limit Exceeded', {
+                description: errorMessage,
+                duration: 8000
+              })
+            } else {
+              toast.error('File Processing Failed', {
+                description: errorMessage,
+                duration: 5000
+              })
+            }
+            
+            onFileDone?.(localKey)
+            return // Polling complete
+          }
           
           const isProcessingComplete = fileStatus === 'ready' || currentProgress >= PROGRESS_COMPLETED
           

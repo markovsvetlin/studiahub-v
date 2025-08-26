@@ -11,11 +11,13 @@ import {
   Loader2,
   AlertCircle,
   Trash2,
-  MoreVertical
+  MoreVertical,
+  ChevronLeft
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
+import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import { useChatStore } from '../hooks/useChatStore'
 import type { Message, Conversation } from '../services/chatApi'
@@ -50,17 +52,13 @@ function formatRelativeTime(timestamp: number): string {
 
 interface MessageItemProps {
   message: Message
-  isOptimistic?: boolean
 }
 
-function MessageItem({ message, isOptimistic = false }: MessageItemProps) {
+function MessageItem({ message }: MessageItemProps) {
   const isUser = message.type === 'user'
   
   return (
-    <div className={cn(
-      "flex flex-col gap-2 py-3 px-4",
-      isOptimistic && "opacity-60"
-    )}>
+    <div className="flex flex-col gap-2 py-3 px-4">
       <div className={cn(
         "flex items-start gap-3",
         isUser ? "flex-row-reverse" : "flex-row"
@@ -78,9 +76,7 @@ function MessageItem({ message, isOptimistic = false }: MessageItemProps) {
         )}>
           <div className={cn(
             "inline-block text-sm whitespace-pre-wrap break-words px-3 py-2 rounded-lg max-w-[80%]",
-            isUser 
-              ? "bg-indigo-600 text-white" 
-              : "bg-neutral-800 text-neutral-200"
+            isUser ? "bg-indigo-600 text-white" : "bg-neutral-800 text-neutral-200"
           )}>
             {message.content}
           </div>
@@ -93,9 +89,6 @@ function MessageItem({ message, isOptimistic = false }: MessageItemProps) {
             {message.tokenUsage && (
               <span>• {message.tokenUsage.total} tokens</span>
             )}
-            {isOptimistic && (
-              <span>• Sending...</span>
-            )}
           </div>
         </div>
       </div>
@@ -106,7 +99,9 @@ function MessageItem({ message, isOptimistic = false }: MessageItemProps) {
           "flex flex-wrap gap-1",
           isUser ? "ml-4 mr-11 justify-end" : "ml-11 justify-start"
         )}>
-          {message.sourceFiles.map((fileName, index) => (
+          {message.sourceFiles
+            .filter(fileName => fileName && fileName.trim() !== '' && fileName.toLowerCase() !== 'unknown' && fileName !== 'Unknown File')
+            .map((fileName, index) => (
             <div
               key={index}
               className="flex items-center gap-1 px-2 py-1 text-xs bg-neutral-800 border border-neutral-700 rounded text-neutral-400"
@@ -284,6 +279,10 @@ export default function ChatInterface({ isOpen, onOpenChange, userId, hasEnabled
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const chatDrawerRef = useRef<HTMLDivElement>(null)
+  
+  // Load conversations when chat opens for the first time
+  const hasLoadedRef = useRef(false)
+  const [isInitialLoading, setIsInitialLoading] = useState(false)
 
   const {
     currentConversation,
@@ -291,7 +290,6 @@ export default function ChatInterface({ isOpen, onOpenChange, userId, hasEnabled
     conversationsList,
     isSending,
     error,
-    rateLimitInfo,
     conversationsPagination,
     loadConversations,
     selectConversation,
@@ -301,10 +299,18 @@ export default function ChatInterface({ isOpen, onOpenChange, userId, hasEnabled
     clearError
   } = useChatStore(userId)
 
-  // Auto-scroll to bottom
+  // Auto-scroll to bottom - instant for initial load, smooth for new messages
+  const prevMessagesLengthRef = useRef(0)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [currentMessages])
+    const isNewMessage = currentMessages.length > prevMessagesLengthRef.current
+    prevMessagesLengthRef.current = currentMessages.length
+    
+    if (currentMessages.length > 0) {
+      messagesEndRef.current?.scrollIntoView({ 
+        behavior: isInitialLoading || !isNewMessage ? 'instant' : 'smooth' 
+      })
+    }
+  }, [currentMessages, isInitialLoading])
 
   // Focus input when drawer opens
   useEffect(() => {
@@ -312,33 +318,22 @@ export default function ChatInterface({ isOpen, onOpenChange, userId, hasEnabled
       inputRef.current.focus()
     }
   }, [isOpen])
-
-  // Load conversations when chat opens for the first time
-  const hasLoadedRef = useRef(false)
   
   useEffect(() => {
     if (isOpen && userId && !hasLoadedRef.current && !conversationsPagination.isLoading) {
       hasLoadedRef.current = true
-      loadConversations()
+      setIsInitialLoading(true)
+      loadConversations().finally(() => {
+        setIsInitialLoading(false)
+      })
     }
     if (!isOpen) {
       hasLoadedRef.current = false // Reset when chat closes
+      setIsInitialLoading(false)
     }
   }, [isOpen, userId, conversationsPagination.isLoading, loadConversations])
 
-  // Close drawer on click outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (chatDrawerRef.current && !chatDrawerRef.current.contains(event.target as Node)) {
-        onOpenChange(false)
-      }
-    }
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [isOpen, onOpenChange])
+  // Note: ESC key and click outside handling is now handled by Sheet component
 
   const handleSendMessage = useCallback(async () => {
     if (!inputMessage.trim() || isSending || !userId || !hasEnabledFiles) return
@@ -356,24 +351,34 @@ export default function ChatInterface({ isOpen, onOpenChange, userId, hasEnabled
     }
   }, [handleSendMessage])
 
-  if (!isOpen) return null
-
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50">
-      <div ref={chatDrawerRef} className="absolute right-0 top-0 h-full w-full max-w-2xl bg-neutral-950 border-l border-neutral-800 shadow-2xl flex flex-col">
+    <Sheet open={isOpen} onOpenChange={onOpenChange}>
+      <SheetContent 
+        ref={chatDrawerRef}
+        className="w-full sm:max-w-2xl p-0 bg-neutral-950 border-neutral-800 [&>button]:hidden" 
+        side="right"
+      >
+        <div className="flex flex-col h-full">
         
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-neutral-800 bg-neutral-950/80 backdrop-blur">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onOpenChange(false)}
+              className="text-neutral-400 hover:text-neutral-200 flex items-center gap-1"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Close
+            </Button>
+          </div>
+
           <div className="flex items-center gap-2">
             <MessageCircle className="w-5 h-5 text-indigo-400" />
             <h2 className="font-semibold text-neutral-200">
               {currentConversation?.title || 'AI Assistant'}
             </h2>
-            {rateLimitInfo && (
-              <span className="text-xs text-neutral-500">
-                ({rateLimitInfo.remainingRequests} requests left)
-              </span>
-            )}
           </div>
           
           <div className="flex items-center gap-2">
@@ -395,15 +400,6 @@ export default function ChatInterface({ isOpen, onOpenChange, userId, hasEnabled
               title="New Conversation"
             >
               <Plus className="w-4 h-4" />
-            </Button>
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onOpenChange(false)}
-              className="text-neutral-400 hover:text-neutral-200"
-            >
-              <X className="w-4 h-4" />
             </Button>
           </div>
         </div>
@@ -428,7 +424,14 @@ export default function ChatInterface({ isOpen, onOpenChange, userId, hasEnabled
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto">
-          {currentMessages.length === 0 ? (
+          {isInitialLoading ? (
+            <div className="flex items-center justify-center h-full text-center text-neutral-500">
+              <div>
+                <Loader2 className="w-8 h-8 mx-auto mb-3 animate-spin" />
+                <p className="text-sm">Loading conversation...</p>
+              </div>
+            </div>
+          ) : currentMessages.length === 0 ? (
             <div className="flex items-center justify-center h-full text-center text-neutral-500">
               <div>
                 <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
@@ -442,7 +445,6 @@ export default function ChatInterface({ isOpen, onOpenChange, userId, hasEnabled
                 <MessageItem
                   key={message.messageId}
                   message={message}
-                  isOptimistic={message.messageId.startsWith('optimistic_')}
                 />
               ))}
               
@@ -507,7 +509,8 @@ export default function ChatInterface({ isOpen, onOpenChange, userId, hasEnabled
             </div>
           )}
         </div>
-      </div>
-    </div>
+        </div>
+      </SheetContent>
+    </Sheet>
   )
 }

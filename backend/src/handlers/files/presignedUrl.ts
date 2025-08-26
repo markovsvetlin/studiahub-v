@@ -14,6 +14,7 @@ import {
 import { createErrorResponse, createSuccessResponse } from '../../utils/http';
 import { createFileRecord, updateFileById, findFileByKey } from '../../utils/files/database';
 import { triggerFileProcessing } from '../../utils/files/queue';
+import { validateUsage } from '../../utils/usage/database';
 
 const s3 = new S3Client({ region: AWS_REGION });
 
@@ -37,6 +38,17 @@ export async function generatePresignedUrl(event: APIGatewayProxyEventV2): Promi
     
     if (fileSize && fileSize > MAX_FILE_SIZE_BYTES) {
       return createErrorResponse(400, 'File too large');
+    }
+    
+    // Check if user has any remaining word quota before allowing upload
+    try {
+      const validation = await validateUsage(userId, 'words', 1); // Check if user can process at least 1 word
+      if (!validation.canProceed) {
+        return createErrorResponse(400, validation.message || 'Usage limit exceeded');
+      }
+    } catch (error) {
+      console.error('Usage validation failed:', error);
+      // Continue with upload - don't block on validation errors, let processing handle it
     }
     
     // Generate user-specific file key

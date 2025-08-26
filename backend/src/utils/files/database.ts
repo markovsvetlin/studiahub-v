@@ -17,6 +17,7 @@ export interface FileRecord {
   createdAt: string;
   updatedAt?: string;
   isEnabled?: boolean;
+  errorMessage?: string;
 }
 
 /**
@@ -57,20 +58,48 @@ export async function updateFileProgress(key: string, progress: number, status?:
 }
 
 /**
+ * Update file with error message by key
+ */
+export async function updateFileError(key: string, errorMessage: string): Promise<void> {
+  const file = await findFileByKey(key);
+  if (!file) {
+    throw new Error(`File not found with key: ${key}`);
+  }
+  
+  await updateFileById(file.id, { 
+    progress: 0, 
+    status: 'error', 
+    errorMessage 
+  });
+}
+
+/**
  * Update file by ID
  */
 export async function updateFileById(fileId: string, data: Partial<FileRecord>): Promise<void> {
+  const updateExpression = ['SET progress = :progress', '#status = :status', 'totalChunks = :totalChunks', 'updatedAt = :updatedAt'];
+  const expressionAttributeValues: Record<string, any> = {
+    ':progress': data.progress ?? 0,
+    ':status': data.status ?? 'processing', 
+    ':totalChunks': data.totalChunks ?? 0,
+    ':updatedAt': new Date().toISOString()
+  };
+  
+  if (data.errorMessage !== undefined) {
+    if (data.errorMessage) {
+      updateExpression.push('errorMessage = :errorMessage');
+      expressionAttributeValues[':errorMessage'] = data.errorMessage;
+    } else {
+      updateExpression.push('REMOVE errorMessage');
+    }
+  }
+  
   await db.send(new UpdateCommand({
     TableName: FILES_TABLE,
     Key: { id: fileId },
-    UpdateExpression: 'SET progress = :progress, #status = :status, totalChunks = :totalChunks, updatedAt = :updatedAt',
+    UpdateExpression: updateExpression.join(', '),
     ExpressionAttributeNames: { '#status': 'status' },
-    ExpressionAttributeValues: {
-      ':progress': data.progress ?? 0,
-      ':status': data.status ?? 'processing', 
-      ':totalChunks': data.totalChunks ?? 0,
-      ':updatedAt': new Date().toISOString()
-    }
+    ExpressionAttributeValues: expressionAttributeValues
   }));
 }
 

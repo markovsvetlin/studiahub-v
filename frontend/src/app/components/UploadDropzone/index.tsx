@@ -35,6 +35,7 @@ export default function UploadDropzone({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [fileProgressByKey, setFileProgressByKey] = useState<Record<string, { progress: number, status: 'idle' | 'processing' | 'done' | 'error' }>>({})
+  const [successfulUploads, setSuccessfulUploads] = useState<Set<string>>(new Set()) // eslint-disable-line @typescript-eslint/no-unused-vars
 
   const inputRef = useRef<HTMLInputElement | null>(null)
 
@@ -49,6 +50,11 @@ export default function UploadDropzone({
       
       // Always update if status is changing to done/error, or if no current progress
       if (!current || status === 'done' || status === 'error') {
+        // Track successful uploads
+        if (status === 'done') {
+          setSuccessfulUploads(prevSuccess => new Set([...prevSuccess, key]))
+        }
+        
         return {
           ...prev,
           [key]: { progress, status }
@@ -93,6 +99,7 @@ export default function UploadDropzone({
   const handleSubmit = useCallback(async () => {
     if (selectedFiles.length === 0) return
     setIsSubmitting(true)
+    setSuccessfulUploads(new Set()) // Reset successful uploads tracker
     
     let cleanupInterval: NodeJS.Timeout | null = null
     
@@ -113,8 +120,13 @@ export default function UploadDropzone({
             setSelectedFiles([])
             if (cleanupInterval) clearInterval(cleanupInterval)
             
-            // Trigger files list refresh when all uploads complete
-            onUploadComplete?.()
+            // Only trigger files list refresh when at least one upload succeeded
+            setSuccessfulUploads(currentSuccessfulUploads => {
+              if (currentSuccessfulUploads.size > 0) {
+                onUploadComplete?.()
+              }
+              return new Set() // Reset for next upload
+            })
             
             return {}
           }

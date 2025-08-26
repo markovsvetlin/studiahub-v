@@ -5,6 +5,8 @@
 import { extractTextFromImageOrPdf } from './textract';
 import { extractTextFromPdf } from './pdf';
 import { extractTextFromDocx } from './docx';
+import { countWordsInPages } from '../../utils/usage/wordCount';
+import { validateUsage, incrementWordsUsed } from '../../utils/usage/database';
 
 export interface PageContent {
   pageNumber: number;
@@ -12,24 +14,39 @@ export interface PageContent {
 }
 
 /**
- * Extract text from file based on type
+ * Extract text from file based on type with usage validation
  */
-export async function extractTextFromFile(bucket: string, key: string): Promise<PageContent[]> {
+export async function extractTextFromFile(bucket: string, key: string, userId?: string): Promise<PageContent[]> {
+  let pages: PageContent[];
+  
   if (key.toLowerCase().endsWith('.pdf')) {
     // Use pdf-parse for PDFs - simpler and focuses on complete text extraction
-    const pdfResult = await extractTextFromPdf({ s3Bucket: bucket, s3Key: key });
-    console.log(`📄 Extracted PDF text: ${pdfResult.reduce((sum, p) => sum + p.text.length, 0)} characters`);
-    return pdfResult;
+    pages = await extractTextFromPdf({ s3Bucket: bucket, s3Key: key });
+    console.log(`📄 Extracted PDF text: ${pages.reduce((sum, p) => sum + p.text.length, 0)} characters`);
+  } else if (key.toLowerCase().endsWith('.docx')) {
+    pages = await extractTextFromDocx({ s3Bucket: bucket, s3Key: key });
+    console.log(`📄 Extracted DOCX text: ${pages.reduce((sum, p) => sum + p.text.length, 0)} characters`);
+  } else {
+    // Default to Textract for images and other formats
+    pages = await extractTextFromImageOrPdf({ s3Bucket: bucket, s3Key: key });
+    console.log(`📄 Extracted text via Textract: ${pages.reduce((sum, p) => sum + p.text.length, 0)} characters`);
   }
   
-  if (key.toLowerCase().endsWith('.docx')) {
-    const docxResult = await extractTextFromDocx({ s3Bucket: bucket, s3Key: key });
-    console.log(`📄 Extracted DOCX text: ${docxResult.reduce((sum, p) => sum + p.text.length, 0)} characters`);
-    return docxResult;
+  // Count words and validate usage
+  const wordCount = countWordsInPages(pages);
+  console.log(`📊 Word count: ${wordCount.toLocaleString()} words`);
+  
+  if (userId) {
+    // Validate usage before processing
+    const validation = await validateUsage(userId, 'words', wordCount);
+    if (!validation.canProceed) {
+      throw new Error(validation.message);
+    }
+    
+    // Increment usage after successful extraction
+    await incrementWordsUsed(userId, wordCount);
+    console.log(`✅ Updated user ${userId} word usage: +${wordCount.toLocaleString()} words`);
   }
   
-  // Default to Textract for images and other formats
-  const textractResult = await extractTextFromImageOrPdf({ s3Bucket: bucket, s3Key: key });
-  console.log(`📄 Extracted text via Textract: ${textractResult.reduce((sum, p) => sum + p.text.length, 0)} characters`);
-  return textractResult;
+  return pages;
 }

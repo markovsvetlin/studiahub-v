@@ -13,6 +13,7 @@ import {
 } from '../../utils/quiz/database'
 import { initializeCompletion } from '../../utils/quiz/completionTracker'
 import { QUIZ_QUEUE_URL } from '../../utils/constants'
+import { validateUsage, incrementQuestionsGenerated } from '../../utils/usage/database'
 
 const IS_LOCAL = process.env.IS_OFFLINE === 'true' || process.env.NODE_ENV === 'development'
 
@@ -61,6 +62,12 @@ export async function generateQuiz(event: APIGatewayProxyEventV2): Promise<APIGa
     }
 
     console.log(`🎯 Generating quiz (${IS_LOCAL ? 'LOCAL' : 'PROD'}): ${request.questionCount} ${request.difficulty} questions`);
+    
+    // Validate usage before processing
+    const validation = await validateUsage(request.userId, 'questions', request.questionCount);
+    if (!validation.canProceed) {
+      return createErrorResponse(429, validation.message!);
+    }
     
     const retrievedChunks = await retrieveChunksForQuiz({
       focusArea: request.topic,
@@ -134,6 +141,10 @@ async function handleLocalFlow(
 
     // Complete quiz
     await completeQuiz(quiz.id, questions)
+    
+    // Increment usage after successful generation
+    await incrementQuestionsGenerated(userId, questions.length);
+    console.log(`✅ Updated user ${userId} question usage: +${questions.length} questions`);
 
     console.log(`🎉 Quiz ${quiz.id} completed locally`);
 
