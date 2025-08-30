@@ -78,7 +78,11 @@ const getQuizStatus = async (quizId: string): Promise<QuizStatus> => {
   return data
 }
 
-const waitForQuizCompletion = async (quizId: string, maxWaitTime: number = 120000): Promise<QuizStatus> => {
+const waitForQuizCompletion = async (
+  quizId: string, 
+  maxWaitTime: number = 120000,
+  onProgress?: (status: QuizStatus) => void
+): Promise<QuizStatus> => {
   const startTime = Date.now()
   const pollInterval = 3000 // Check every 3 seconds
   
@@ -92,6 +96,11 @@ const waitForQuizCompletion = async (quizId: string, maxWaitTime: number = 12000
         : `${status.progress}%`
       
       console.log(`📊 Quiz progress: ${progressInfo} (${status.status})`)
+      
+      // Call progress callback if provided
+      if (onProgress) {
+        onProgress(status)
+      }
       
       if (status.status === 'ready') {
         console.log('✅ Quiz completed successfully!')
@@ -115,7 +124,10 @@ const waitForQuizCompletion = async (quizId: string, maxWaitTime: number = 12000
   throw new Error('Quiz generation timed out')
 }
 
-const generateAndWaitForQuiz = async (quizData: QuizData): Promise<QuizStatus> => {
+const generateAndWaitForQuiz = async (
+  quizData: QuizData,
+  onProgress?: (status: QuizStatus) => void
+): Promise<QuizStatus> => {
 
   const generateResponse = await generateQuiz(quizData)
   
@@ -124,7 +136,7 @@ const generateAndWaitForQuiz = async (quizData: QuizData): Promise<QuizStatus> =
   }
   
   // Step 2: Wait for completion and get questions
-  const completedQuiz = await waitForQuizCompletion(generateResponse.quizId)
+  const completedQuiz = await waitForQuizCompletion(generateResponse.quizId, 120000, onProgress)
   
   return completedQuiz
 }

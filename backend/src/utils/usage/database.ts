@@ -5,10 +5,10 @@ const USAGE_TABLE = process.env.USAGE_TABLE!
 
 export interface UsageRecord {
   userId: string
-  wordsUsed: number
+  wordsUsed: number // Now represents words stored (current storage, not cumulative processing)
   questionsGenerated: number
   tokensUsed: number
-  resetDate: string // ISO date string
+  resetDate: string // ISO date string - still needed for questions/tokens reset
   createdAt: number
   updatedAt: number
 }
@@ -58,12 +58,12 @@ export async function getUserUsage(userId: string): Promise<UsageRecord> {
       const now = new Date()
       
       if (now >= resetDate) {
-        // Reset usage and update reset date
+        // Reset usage and update reset date (but keep wordsStored as it's based on current files)
         const updatedUsage: UsageRecord = {
           ...usage,
-          wordsUsed: 0,
-          questionsGenerated: 0,
-          tokensUsed: 0,
+          wordsUsed: usage.wordsUsed, // Keep current storage amount
+          questionsGenerated: 0, // Reset questions
+          tokensUsed: 0, // Reset tokens
           resetDate: calculateNextResetDate(now),
           updatedAt: Date.now()
         }
@@ -103,22 +103,60 @@ export async function getUserUsage(userId: string): Promise<UsageRecord> {
 }
 
 /**
- * Increment words used
+ * Increment words stored (when file is uploaded)
  */
-export async function incrementWordsUsed(userId: string, wordCount: number): Promise<void> {
+export async function incrementWordsStored(userId: string, wordCount: number): Promise<void> {
   try {
-    await db.send(new UpdateCommand({
+    console.log(`🔍 INCREMENT DEBUG: userId=${userId}, wordCount=${wordCount}`);
+    
+    const result = await db.send(new UpdateCommand({
       TableName: USAGE_TABLE,
       Key: { userId },
       UpdateExpression: 'SET wordsUsed = wordsUsed + :increment, updatedAt = :now',
       ExpressionAttributeValues: {
         ':increment': wordCount,
         ':now': Date.now()
-      }
+      },
+      ReturnValues: 'ALL_NEW'
     }))
+    
+    console.log(`✅ INCREMENT SUCCESS: New usage after increment:`, result.Attributes);
   } catch (error) {
-    console.error('Error incrementing words used:', error)
-    throw new Error('Failed to update word usage')
+    console.error('❌ Error incrementing words stored:', error)
+    throw new Error('Failed to update word storage')
+  }
+}
+
+/**
+ * Decrement words stored (when file is deleted)
+ */
+export async function decrementWordsStored(userId: string, wordCount: number): Promise<void> {
+  try {
+    console.log(`🔍 DECREMENT DEBUG: userId=${userId}, wordCount=${wordCount}`);
+    
+    // First check current usage before decrementing
+    const currentUsage = await getUserUsage(userId);
+    console.log(`📊 Current usage before decrement: ${currentUsage.wordsUsed} words`);
+    
+    // Calculate new value but don't go below 0
+    const newWordsUsed = Math.max(0, currentUsage.wordsUsed - wordCount);
+    console.log(`📊 Will set wordsUsed to: ${newWordsUsed} (was ${currentUsage.wordsUsed}, subtracting ${wordCount})`);
+    
+    const result = await db.send(new UpdateCommand({
+      TableName: USAGE_TABLE,
+      Key: { userId },
+      UpdateExpression: 'SET wordsUsed = :newValue, updatedAt = :now',
+      ExpressionAttributeValues: {
+        ':newValue': newWordsUsed,
+        ':now': Date.now()
+      },
+      ReturnValues: 'ALL_NEW'
+    }))
+    
+    console.log(`✅ DECREMENT SUCCESS: New usage after decrement:`, result.Attributes);
+  } catch (error) {
+    console.error('❌ Error decrementing words stored:', error)
+    throw new Error('Failed to update word storage')
   }
 }
 

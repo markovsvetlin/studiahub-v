@@ -168,7 +168,7 @@ export default function UsageCard({ usage, isLoading, error }: UsageCardProps) {
       <CardContent className="space-y-4">
         <UsageMetric
           icon={<FileText className="w-4 h-4 text-indigo-400" />}
-          label="Words Processed"
+          label="Words Stored"
           current={usage.current.words}
           limit={usage.limits.words}
           percentage={usage.percentages.words}
@@ -200,7 +200,7 @@ export default function UsageCard({ usage, isLoading, error }: UsageCardProps) {
           <div className="flex items-center justify-between text-xs text-neutral-400">
             <div className="flex items-center gap-1">
               <Calendar className="w-3 h-3" />
-              <span>Resets on</span>
+              <span>Questions/Tokens reset on</span>
             </div>
             <span className="font-medium text-neutral-300">
               {usage.resetDateFormatted}

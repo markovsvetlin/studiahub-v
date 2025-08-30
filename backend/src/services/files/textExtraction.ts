@@ -6,7 +6,7 @@ import { extractTextFromImageOrPdf } from './textract';
 import { extractTextFromPdf } from './pdf';
 import { extractTextFromDocx } from './docx';
 import { countWordsInPages } from '../../utils/usage/wordCount';
-import { validateUsage, incrementWordsUsed } from '../../utils/usage/database';
+import { validateUsage } from '../../utils/usage/database';
 
 export interface PageContent {
   pageNumber: number;
@@ -32,21 +32,9 @@ export async function extractTextFromFile(bucket: string, key: string, userId?: 
     console.log(`📄 Extracted text via Textract: ${pages.reduce((sum, p) => sum + p.text.length, 0)} characters`);
   }
   
-  // Count words and validate usage
+  // Count words for logging (usage will be handled in processFile.ts)
   const wordCount = countWordsInPages(pages);
   console.log(`📊 Word count: ${wordCount.toLocaleString()} words`);
-  
-  if (userId) {
-    // Validate usage before processing
-    const validation = await validateUsage(userId, 'words', wordCount);
-    if (!validation.canProceed) {
-      throw new Error(validation.message);
-    }
-    
-    // Increment usage after successful extraction
-    await incrementWordsUsed(userId, wordCount);
-    console.log(`✅ Updated user ${userId} word usage: +${wordCount.toLocaleString()} words`);
-  }
   
   return pages;
 }

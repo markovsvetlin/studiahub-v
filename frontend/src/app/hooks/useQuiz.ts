@@ -38,6 +38,7 @@ export function useQuiz(userId: string | undefined) {
   const [showQuizSettings, setShowQuizSettings] = useState(false)
   const [userQuizzes, setUserQuizzes] = useState<QuizListItem[]>([])
   const [isLoadingQuizzes, setIsLoadingQuizzes] = useState(false)
+  const [quizProgress, setQuizProgress] = useState<QuizStatus | null>(null)
   const hasFetched = useRef(false)
 
   const fetchUserQuizzes = async () => {
@@ -113,6 +114,7 @@ export function useQuiz(userId: string | undefined) {
     if (!userId) return
     
     setIsGenerating(true)
+    setQuizProgress(null) // Reset progress
     
     try {
       const response = await generateAndWaitForQuiz({
@@ -123,6 +125,9 @@ export function useQuiz(userId: string | undefined) {
         difficulty: settings.difficulty,
         topic: settings.topic || undefined,
         additionalInstructions: settings.additionalInstructions || undefined
+      }, (progress) => {
+        // Progress callback - update quiz progress state
+        setQuizProgress(progress)
       })
       
       setQuizData(response)
@@ -154,6 +159,7 @@ export function useQuiz(userId: string | undefined) {
       }
     } finally {
       setIsGenerating(false)
+      setQuizProgress(null) // Clear progress
     }
   }
 
@@ -166,6 +172,7 @@ export function useQuiz(userId: string | undefined) {
   return {
     isGenerating,
     quizData,
+    quizProgress,
     showQuizQuestions,
     setShowQuizQuestions,
     showQuizSettings,

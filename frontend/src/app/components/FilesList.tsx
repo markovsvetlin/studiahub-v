@@ -23,6 +23,7 @@ import { useUser } from "@clerk/nextjs";
 import QuizDrawer from './QuizDrawer'
 import QuizQuestions from './QuizQuestions'
 import QuizList from './QuizList'
+import QuizGenerationLoader from './QuizGenerationLoader'
 import { useQuiz } from '../hooks/useQuiz'
 import ChatInterface from './ChatInterface'
 
@@ -217,6 +218,7 @@ export default function FilesList({
   const {
     isGenerating,
     quizData,
+    quizProgress,
     showQuizQuestions,
     setShowQuizQuestions,
     showQuizSettings,
@@ -294,26 +296,14 @@ export default function FilesList({
   return (
     <>
       <Card className="max-w-4xl w-full relative">
-      {/* Loading Overlay */}
-      {isGenerating && (
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
-          <div className="bg-neutral-900 border border-neutral-700 rounded-xl p-8 text-center space-y-4 shadow-2xl">
-            <div className="flex items-center justify-center">
-              <div className="w-12 h-12 border-4 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-white">Generating Quiz</h3>
-              <p className="text-neutral-400 text-sm">
-                AI is analyzing your documents and creating personalized questions...
-              </p>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-neutral-500">
-              <div className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse"></div>
-              <span>This may take 30-60 seconds</span>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Enhanced Quiz Generation Loader */}
+      <QuizGenerationLoader
+        isGenerating={isGenerating}
+        progress={quizProgress?.progress}
+        workers={quizProgress?.workers}
+        quizName={quizProgress?.metadata?.quizName}
+        questionCount={quizProgress?.metadata?.questionCount}
+      />
       
       <CardHeader>
         <div className="flex items-start justify-between">

@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState, useEffect } from 'react'
 import { GraduationCap, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -36,6 +36,7 @@ export default function UploadDropzone({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [fileProgressByKey, setFileProgressByKey] = useState<Record<string, { progress: number, status: 'idle' | 'processing' | 'done' | 'error' }>>({})
   const [successfulUploads, setSuccessfulUploads] = useState<Set<string>>(new Set()) // eslint-disable-line @typescript-eslint/no-unused-vars
+  const [shouldCallOnComplete, setShouldCallOnComplete] = useState(false)
 
   const inputRef = useRef<HTMLInputElement | null>(null)
 
@@ -120,10 +121,10 @@ export default function UploadDropzone({
             setSelectedFiles([])
             if (cleanupInterval) clearInterval(cleanupInterval)
             
-            // Only trigger files list refresh when at least one upload succeeded
+            // Check if we need to call onUploadComplete
             setSuccessfulUploads(currentSuccessfulUploads => {
               if (currentSuccessfulUploads.size > 0) {
-                onUploadComplete?.()
+                setShouldCallOnComplete(true) // Trigger callback in useEffect
               }
               return new Set() // Reset for next upload
             })
@@ -141,7 +142,15 @@ export default function UploadDropzone({
         clearInterval(cleanupInterval)
       }
     }
-  }, [makeKey, selectedFiles, setProgress, onUploadComplete, userId])
+  }, [makeKey, selectedFiles, setProgress, userId])
+
+  // Call onUploadComplete outside of render phase to avoid React state update warnings
+  useEffect(() => {
+    if (shouldCallOnComplete) {
+      setShouldCallOnComplete(false)
+      onUploadComplete?.()
+    }
+  }, [shouldCallOnComplete, onUploadComplete])
 
   const openPicker = () => { if (inputRef.current) inputRef.current.value = ''; inputRef.current?.click() }
 

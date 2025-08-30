@@ -4,7 +4,7 @@ import { FileListItem } from '@/types/file'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://oyehv715ef.execute-api.us-east-1.amazonaws.com'
 
-export function useFiles(userId?: string) {
+export function useFiles(userId?: string, refreshUsage?: () => void) {
   const [files, setFiles] = useState<FileListItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -86,10 +86,15 @@ export function useFiles(userId?: string) {
       
       setFiles(prev => prev.filter(file => file.id !== fileId))
       
+      // Refresh usage immediately after file deletion to update word storage
+      if (refreshUsage) {
+        refreshUsage()
+      }
+      
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete file')
     }
-  }, [])
+  }, [refreshUsage])
 
   useEffect(() => {
     fetchFiles()

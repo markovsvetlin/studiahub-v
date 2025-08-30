@@ -2,7 +2,9 @@ import { db } from '../../db'
 import { PutCommand, GetCommand, UpdateCommand, QueryCommand } from '@aws-sdk/lib-dynamodb'
 import { v4 as uuidv4 } from 'uuid'
 
-const CONVERSATIONS_TABLE = process.env.CONVERSATIONS_TABLE!
+import { CONVERSATIONS_TABLE } from '../constants';
+
+const CONVERSATIONS_TABLE_NAME = CONVERSATIONS_TABLE;
 
 export interface Conversation {
   conversationId: string
@@ -47,7 +49,7 @@ export async function createConversation(
   }
 
   await db.send(new PutCommand({
-    TableName: CONVERSATIONS_TABLE,
+    TableName: CONVERSATIONS_TABLE_NAME,
     Item: conversation,
     ConditionExpression: 'attribute_not_exists(conversationId)' // Prevent duplicates
   }))
@@ -105,7 +107,7 @@ export async function updateConversationMetrics(
   }
 
   await db.send(new UpdateCommand({
-    TableName: CONVERSATIONS_TABLE,
+    TableName: CONVERSATIONS_TABLE_NAME,
     Key: { conversationId },
     UpdateExpression: updateExpression,
     ConditionExpression: 'userId = :userId AND #status = :activeStatus',
@@ -132,7 +134,7 @@ export async function getUserConversations(
   hasMore: boolean
 }> {
   const result = await db.send(new QueryCommand({
-    TableName: CONVERSATIONS_TABLE,
+    TableName: CONVERSATIONS_TABLE_NAME,
     IndexName: 'user-conversations-index',
     KeyConditionExpression: 'userId = :userId',
     FilterExpression: '#status = :status',
@@ -163,7 +165,7 @@ export async function getConversation(
   userId: string
 ): Promise<Conversation | null> {
   const result = await db.send(new GetCommand({
-    TableName: CONVERSATIONS_TABLE,
+    TableName: CONVERSATIONS_TABLE_NAME,
     Key: { conversationId }
   }))
 
@@ -185,7 +187,7 @@ export async function archiveConversation(
   userId: string
 ): Promise<void> {
   await db.send(new UpdateCommand({
-    TableName: CONVERSATIONS_TABLE,
+    TableName: CONVERSATIONS_TABLE_NAME,
     Key: { conversationId },
     UpdateExpression: 'SET #status = :archivedStatus, updatedAt = :updatedAt',
     ConditionExpression: 'userId = :userId AND #status = :activeStatus',

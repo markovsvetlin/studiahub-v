@@ -24,7 +24,7 @@ export default function Dashboard() {
 function MainContent() {
   const { user } = useUser()
   const { usage, isLoading: usageLoading, error: usageError, refreshUsage } = useUsage(user?.id)
-  const { files, isLoading, error, toggleFileEnabled, deleteFile, refreshFiles } = useFiles(user?.id)
+  const { files, isLoading, error, toggleFileEnabled, deleteFile, refreshFiles } = useFiles(user?.id, refreshUsage)
 
   const handleUploadComplete = () => {
     refreshFiles()

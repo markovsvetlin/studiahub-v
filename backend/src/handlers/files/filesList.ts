@@ -9,13 +9,11 @@ import { db } from '../../db';
 import { FILES_TABLE, S3_BUCKET, AWS_REGION } from '../../utils/constants';
 import { createErrorResponse, createSuccessResponse } from '../../utils/http';
 import { pineconeService } from '../../services/files/pinecone';
+import { decrementWordsStored } from '../../utils/usage/database';
 import { getUserReadyFiles } from '../../utils/files/database';
 
 const s3 = new S3Client({ region: AWS_REGION });
 
-/**
- * List user's ready files - now using optimal GSI query (no filtering!)
- */
 export async function list(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
   try {
     const userId = event.queryStringParameters?.userId;
@@ -23,16 +21,12 @@ export async function list(event: APIGatewayProxyEventV2): Promise<APIGatewayPro
       return createErrorResponse(400, 'userId query parameter required');
     }
 
-    // Direct query for ready files - no filtering needed!
     const readyFiles = await getUserReadyFiles(userId);
 
     const files = readyFiles.map(item => {
-      // Extract filename from key (remove timestamp prefix)
       const keyParts = item.key.split('/');
       const filename = keyParts[keyParts.length - 1];
       const cleanFilename = filename.replace(/^\d+-/, ''); // Remove timestamp prefix
-      
-      // Determine content type from filename
       let contentType = 'application/octet-stream';
       if (cleanFilename.toLowerCase().endsWith('.pdf')) {
         contentType = 'application/pdf';
@@ -40,19 +34,7 @@ export async function list(event: APIGatewayProxyEventV2): Promise<APIGatewayPro
         contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
       } else if (cleanFilename.toLowerCase().match(/\.(png|jpg|jpeg|gif|webp)$/)) {
         contentType = `image/${cleanFilename.split('.').pop()?.toLowerCase()}`;
-      }
-
-      // Estimate file size from filename or use a default
-      // In a real implementation, you'd store this in the DB or get it from S3
-      let estimatedSize = 1024 * 1024; // Default 1MB
-      if (cleanFilename.toLowerCase().endsWith('.pdf')) {
-        estimatedSize = 2.5 * 1024 * 1024; // 2.5MB for PDFs
-      } else if (cleanFilename.toLowerCase().endsWith('.docx')) {
-        estimatedSize = 1.8 * 1024 * 1024; // 1.8MB for DOCX
-      } else if (cleanFilename.toLowerCase().match(/\.(png|jpg|jpeg|gif|webp)$/)) {
-        estimatedSize = 0.8 * 1024 * 1024; // 800KB for images
-      }
-
+      }  
       return {
         id: item.id,
         key: item.key,
@@ -60,12 +42,10 @@ export async function list(event: APIGatewayProxyEventV2): Promise<APIGatewayPro
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
         contentType,
-        fileSize: Math.round(estimatedSize),
         isEnabled: item.isEnabled !== undefined ? item.isEnabled : true
       };
     });
 
-    // Sort by creation date (newest first) - simple and clean
     files.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     return createSuccessResponse({ files });
@@ -75,9 +55,7 @@ export async function list(event: APIGatewayProxyEventV2): Promise<APIGatewayPro
   }
 }
 
-/**
- * Delete a file completely - removes from S3, Pinecone, and DynamoDB
- */
+
 export async function deleteFile(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
   try {
     const fileId = event.pathParameters?.id;
@@ -85,9 +63,6 @@ export async function deleteFile(event: APIGatewayProxyEventV2): Promise<APIGate
       return createErrorResponse(400, 'File ID required');
     }
 
-    console.log(`Starting deletion process for file: ${fileId}`);
-
-    // Step 1: Get file record to get the S3 key
     const getResult = await db.send(new GetCommand({
       TableName: FILES_TABLE,
       Key: { id: fileId }
@@ -110,25 +85,46 @@ export async function deleteFile(event: APIGatewayProxyEventV2): Promise<APIGate
       console.log(`✅ Deleted from S3: ${s3Key}`);
     } catch (s3Error) {
       console.warn(`⚠️  Failed to delete from S3: ${s3Error}`);
-      // Continue with other deletions even if S3 fails
     }
 
-    // Step 3: Delete from Pinecone (use userId from file record)
     try {
       await pineconeService.initialize();
       await pineconeService.deleteFileChunks(fileId, fileRecord.userId);
       console.log(`✅ Deleted chunks from Pinecone for file: ${fileId}`);
     } catch (pineconeError) {
       console.warn(`⚠️  Failed to delete from Pinecone: ${pineconeError}`);
-      // Continue with DynamoDB deletion even if Pinecone fails
     }
 
-    // Step 4: Delete from DynamoDB
+    // Step 3: Decrement word storage if wordCount is available
+    console.log(`🔍 File record debug:`, {
+      fileId,
+      userId: fileRecord.userId,
+      wordCount: fileRecord.wordCount,
+      hasWordCount: !!fileRecord.wordCount,
+      hasUserId: !!fileRecord.userId
+    });
+    
+    if (fileRecord.wordCount && fileRecord.userId) {
+      try {
+        await decrementWordsStored(fileRecord.userId, fileRecord.wordCount);
+        console.log(`✅ Decremented word storage by ${fileRecord.wordCount} words for user ${fileRecord.userId}`);
+      } catch (usageError) {
+        console.warn(`⚠️  Failed to decrement word storage: ${usageError}`);
+      }
+    } else {
+      console.warn(`⚠️  Cannot decrement word storage: wordCount=${fileRecord.wordCount}, userId=${fileRecord.userId}`);
+      
+      // For files without wordCount, we can't track usage accurately
+      // This happens with files uploaded before wordCount tracking was added
+      if (fileRecord.userId && !fileRecord.wordCount) {
+        console.log(`💡 File ${fileId} was uploaded before word tracking - no usage adjustment needed`);
+      }
+    }
+
     await db.send(new DeleteCommand({
       TableName: FILES_TABLE,
       Key: { id: fileId }
     }));
-    console.log(`✅ Deleted from DynamoDB: ${fileId}`);
 
     console.log(`🎉 Successfully deleted file ${fileId} from all systems`);
     return createSuccessResponse({ 
@@ -142,9 +138,6 @@ export async function deleteFile(event: APIGatewayProxyEventV2): Promise<APIGate
   }
 }
 
-/**
- * Toggle file enabled status
- */
 export async function toggleFile(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
   try {
     const fileId = event.pathParameters?.id;
@@ -157,11 +150,7 @@ export async function toggleFile(event: APIGatewayProxyEventV2): Promise<APIGate
     }
 
     const { isEnabled } = JSON.parse(event.body);
-    if (typeof isEnabled !== 'boolean') {
-      return createErrorResponse(400, 'isEnabled must be a boolean');
-    }
 
-    // Update the isEnabled field in DynamoDB
     await db.send(new UpdateCommand({
       TableName: FILES_TABLE,
       Key: { id: fileId },
@@ -171,7 +160,7 @@ export async function toggleFile(event: APIGatewayProxyEventV2): Promise<APIGate
         ':updatedAt': new Date().toISOString()
       }
     }));
-
+ 
     console.log(`✅ File ${fileId} ${isEnabled ? 'enabled' : 'disabled'} in context pool`);
     
     return createSuccessResponse({ 

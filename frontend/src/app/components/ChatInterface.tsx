@@ -17,7 +17,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
-import { Sheet, SheetContent } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import { useChatStore } from '../hooks/useChatStore'
 import type { Message, Conversation } from '../services/chatApi'
@@ -358,6 +358,10 @@ export default function ChatInterface({ isOpen, onOpenChange, userId, hasEnabled
         className="w-full sm:max-w-2xl p-0 bg-neutral-950 border-neutral-800 [&>button]:hidden" 
         side="right"
       >
+        <SheetHeader className="sr-only">
+          <SheetTitle>Chat Interface</SheetTitle>
+          <SheetDescription>AI-powered chat using your uploaded documents</SheetDescription>
+        </SheetHeader>
         <div className="flex flex-col h-full">
         
         {/* Header */}

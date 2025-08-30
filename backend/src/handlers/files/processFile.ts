@@ -7,6 +7,8 @@ import { simpleSemanticChunk } from '../../services/files/chunking';
 import { embedOpenAI } from '../../services/files/embeddings';
 import { pineconeService } from '../../services/files/pinecone';
 import { findFileByKey, updateFileProgress, updateFileById, updateFileError } from '../../utils/files/database';
+import { validateUsage, incrementWordsStored } from '../../utils/usage/database';
+import { countWordsInPages } from '../../utils/usage/wordCount';
 
 /**
  * Main file processing function
@@ -19,6 +21,24 @@ export async function processObject(bucket: string, key: string, userId?: string
     // Extract text from file
     const pages = await extractTextFromFile(bucket, key, userId);
     await updateFileProgress(key, 40);
+    
+    // Count words and validate usage
+    const wordCount = countWordsInPages(pages);
+    console.log(`📊 File contains ${wordCount} words`);
+    
+    // Get file record to get userId if not provided
+    const file = await findFileByKey(key);
+    const fileUserId = userId || file?.userId;
+    
+    if (!fileUserId) {
+      throw new Error('User ID not found for usage validation');
+    }
+    
+    // Validate word usage before processing
+    const usageValidation = await validateUsage(fileUserId, 'words', wordCount);
+    if (!usageValidation.canProceed) {
+      throw new Error(`Usage limit exceeded: ${usageValidation.message}`);
+    }
     
     // Create chunks with guaranteed complete coverage
     const chunks = simpleSemanticChunk(pages);
@@ -40,10 +60,9 @@ export async function processObject(bucket: string, key: string, userId?: string
     
     await updateFileProgress(key, 60);
     
-    // Update database with chunk count
-    const file = await findFileByKey(key);
+    
     if (file) {
-      await updateFileById(file.id, { totalChunks: chunks.length });
+      await updateFileById(file.id, { totalChunks: chunks.length, wordCount });
     }
     
     // Process embeddings with user namespace
@@ -52,6 +71,10 @@ export async function processObject(bucket: string, key: string, userId?: string
     
     // Mark as complete
     await updateFileProgress(key, 100, 'ready');
+    
+    // Increment word storage after successful processing
+    await incrementWordsStored(fileUserId, wordCount);
+    console.log(`✅ Updated user ${fileUserId} word storage: +${wordCount} words`);
   } catch (error) {
     console.error('Processing failed:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown processing error';

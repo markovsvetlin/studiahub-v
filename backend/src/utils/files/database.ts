@@ -14,6 +14,7 @@ export interface FileRecord {
   status: 'uploading' | 'queued' | 'processing' | 'ready' | 'error';
   progress: number;
   totalChunks: number;
+  wordCount?: number; // Track word count for each file
   createdAt: string;
   updatedAt?: string;
   isEnabled?: boolean;
@@ -84,6 +85,11 @@ export async function updateFileById(fileId: string, data: Partial<FileRecord>):
     ':totalChunks': data.totalChunks ?? 0,
     ':updatedAt': new Date().toISOString()
   };
+  
+  if (data.wordCount !== undefined) {
+    updateExpression.push('wordCount = :wordCount');
+    expressionAttributeValues[':wordCount'] = data.wordCount;
+  }
   
   if (data.errorMessage !== undefined) {
     if (data.errorMessage) {

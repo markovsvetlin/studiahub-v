@@ -18,6 +18,9 @@ const service = process.env.SERVICE || "studiahub-backend";
 const itemsTableName = `${service}-${stage}-items`;
 const filesTableName = `${service}-${stage}-files`;
 const quizTableName = `${service}-${stage}-quizzes`;
+const usageTableName = `${service}-${stage}-usage`;
+const chatTableName = `${service}-${stage}-chat`;
+const conversationsTableName = `${service}-${stage}-conversations`;
 
 const client = new DynamoDBClient({ region, endpoint });
 
@@ -66,6 +69,8 @@ async function main() {
     AttributeDefinitions: [
       { AttributeName: "id", AttributeType: "S" },
       { AttributeName: "key", AttributeType: "S" },
+      { AttributeName: "userId", AttributeType: "S" },
+      { AttributeName: "status", AttributeType: "S" },
     ],
     KeySchema: [
       { AttributeName: "id", KeyType: "HASH" },
@@ -75,6 +80,14 @@ async function main() {
         IndexName: "key-index",
         KeySchema: [
           { AttributeName: "key", KeyType: "HASH" },
+        ],
+        Projection: { ProjectionType: "ALL" },
+      },
+      {
+        IndexName: "user-status-index",
+        KeySchema: [
+          { AttributeName: "userId", KeyType: "HASH" },
+          { AttributeName: "status", KeyType: "RANGE" },
         ],
         Projection: { ProjectionType: "ALL" },
       },
@@ -90,6 +103,59 @@ async function main() {
     ],
     KeySchema: [
       { AttributeName: "id", KeyType: "HASH" },
+    ],
+    GlobalSecondaryIndexes: [
+      {
+        IndexName: "user-index",
+        KeySchema: [
+          { AttributeName: "userId", KeyType: "HASH" },
+        ],
+        Projection: { ProjectionType: "ALL" },
+      },
+    ],
+    BillingMode: "PAY_PER_REQUEST",
+  });
+
+  await ensureTable({
+    TableName: usageTableName,
+    AttributeDefinitions: [
+      { AttributeName: "userId", AttributeType: "S" },
+    ],
+    KeySchema: [
+      { AttributeName: "userId", KeyType: "HASH" },
+    ],
+    BillingMode: "PAY_PER_REQUEST",
+  });
+
+  await ensureTable({
+    TableName: chatTableName,
+    AttributeDefinitions: [
+      { AttributeName: "id", AttributeType: "S" },
+      { AttributeName: "userId", AttributeType: "S" },
+    ],
+    KeySchema: [
+      { AttributeName: "id", KeyType: "HASH" },
+    ],
+    GlobalSecondaryIndexes: [
+      {
+        IndexName: "user-index",
+        KeySchema: [
+          { AttributeName: "userId", KeyType: "HASH" },
+        ],
+        Projection: { ProjectionType: "ALL" },
+      },
+    ],
+    BillingMode: "PAY_PER_REQUEST",
+  });
+
+  await ensureTable({
+    TableName: conversationsTableName,
+    AttributeDefinitions: [
+      { AttributeName: "conversationId", AttributeType: "S" },
+      { AttributeName: "userId", AttributeType: "S" },
+    ],
+    KeySchema: [
+      { AttributeName: "conversationId", KeyType: "HASH" },
     ],
     GlobalSecondaryIndexes: [
       {

@@ -9,9 +9,7 @@ import { createErrorResponse, createSuccessResponse } from '../../utils/http';
 
 const s3 = new S3Client({ region: AWS_REGION });
 
-/**
- * Get file status or content
- */
+
 export async function get(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
   try {
     const fileKey = event.pathParameters?.key;

@@ -2,7 +2,9 @@ import { db } from '../../db'
 import { PutCommand, QueryCommand, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb'
 import { v4 as uuidv4 } from 'uuid'
 
-const CHAT_TABLE = process.env.CHAT_TABLE!
+import { CHAT_TABLE } from '../constants';
+
+const CHAT_TABLE_NAME = CHAT_TABLE;
 
 export interface ChatMessage {
   id: string
@@ -61,7 +63,7 @@ export async function createMessage(
   }
 
   await db.send(new PutCommand({
-    TableName: CHAT_TABLE,
+    TableName: CHAT_TABLE_NAME,
     Item: message
   }))
 
@@ -73,7 +75,7 @@ export async function getConversationMessages(
   userId: string
 ): Promise<ChatMessage[]> {
   const result = await db.send(new QueryCommand({
-    TableName: CHAT_TABLE,
+    TableName: CHAT_TABLE_NAME,
     IndexName: 'conversation-index',
     KeyConditionExpression: 'conversationId = :conversationId',
     FilterExpression: 'userId = :userId AND recordType = :recordType',
@@ -90,7 +92,7 @@ export async function getConversationMessages(
 
 export async function getUserConversations(userId: string): Promise<Conversation[]> {
   const result = await db.send(new QueryCommand({
-    TableName: CHAT_TABLE,
+    TableName: CHAT_TABLE_NAME,
     IndexName: 'user-index',
     KeyConditionExpression: 'userId = :userId',
     FilterExpression: 'recordType = :recordType',
@@ -118,7 +120,7 @@ export async function createOrUpdateConversation(
     
     // Try to get existing conversation
     const existing = await db.send(new GetCommand({
-      TableName: CHAT_TABLE,
+      TableName: CHAT_TABLE_NAME,
       Key: { id: conversationRecordId }
     }))
 
@@ -134,7 +136,7 @@ export async function createOrUpdateConversation(
       }
 
       await db.send(new PutCommand({
-        TableName: CHAT_TABLE,
+        TableName: CHAT_TABLE_NAME,
         Item: updatedConversation
       }))
 
@@ -155,7 +157,7 @@ export async function createOrUpdateConversation(
       }
 
       await db.send(new PutCommand({
-        TableName: CHAT_TABLE,
+        TableName: CHAT_TABLE_NAME,
         Item: conversationRecord
       }))
 
@@ -176,7 +178,7 @@ export async function updateConversationTitle(
   const conversationRecordId = `conv_${conversationId}`
   
   await db.send(new UpdateCommand({
-    TableName: CHAT_TABLE,
+    TableName: CHAT_TABLE_NAME,
     Key: { id: conversationRecordId },
     UpdateExpression: 'SET title = :title, updatedAt = :updatedAt',
     ConditionExpression: 'userId = :userId',
@@ -194,7 +196,7 @@ export async function getConversation(
 ): Promise<Conversation | null> {
   const conversationRecordId = `conv_${conversationId}`
   const result = await db.send(new GetCommand({
-    TableName: CHAT_TABLE,
+    TableName: CHAT_TABLE_NAME,
     Key: { id: conversationRecordId }
   }))
 
