@@ -18,11 +18,19 @@ export interface PageContent {
  */
 export async function extractTextFromFile(bucket: string, key: string, userId?: string): Promise<PageContent[]> {
   let pages: PageContent[];
-  
+  console.log('vlizaaa')
   if (key.toLowerCase().endsWith('.pdf')) {
-    // Use pdf-parse for PDFs - simpler and focuses on complete text extraction
+    // Try pdf-parse first (fast for text-based PDFs)
     pages = await extractTextFromPdf({ s3Bucket: bucket, s3Key: key });
-    console.log(`📄 Extracted PDF text: ${pages.reduce((sum, p) => sum + p.text.length, 0)} characters`);
+    const extractedChars = pages.reduce((sum, p) => sum + p.text.length, 0);
+    console.log(`📄 Extracted PDF text via pdf-parse: ${extractedChars} characters`);
+    
+    // If no meaningful text extracted, likely a scanned PDF - use Textract OCR
+    if (extractedChars < 200) { // Threshold for minimal text content
+      console.log(`🔍 PDF appears to be scanned (${extractedChars} chars), falling back to Textract OCR...`);
+      pages = await extractTextFromImageOrPdf({ s3Bucket: bucket, s3Key: key });
+      console.log(`📄 Extracted PDF text via Textract OCR: ${pages.reduce((sum, p) => sum + p.text.length, 0)} characters`);
+    }
   } else if (key.toLowerCase().endsWith('.docx')) {
     pages = await extractTextFromDocx({ s3Bucket: bucket, s3Key: key });
     console.log(`📄 Extracted DOCX text: ${pages.reduce((sum, p) => sum + p.text.length, 0)} characters`);

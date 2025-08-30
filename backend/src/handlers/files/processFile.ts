@@ -9,6 +9,12 @@ import { pineconeService } from '../../services/files/pinecone';
 import { findFileByKey, updateFileProgress, updateFileById, updateFileError } from '../../utils/files/database';
 import { validateUsage, incrementWordsStored } from '../../utils/usage/database';
 import { countWordsInPages } from '../../utils/usage/wordCount';
+import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { DeleteCommand } from '@aws-sdk/lib-dynamodb';
+import { db } from '../../db';
+import { FILES_TABLE, S3_BUCKET, AWS_REGION } from '../../utils/constants';
+
+const s3 = new S3Client({ region: AWS_REGION });
 
 /**
  * Main file processing function
@@ -21,6 +27,28 @@ export async function processObject(bucket: string, key: string, userId?: string
     // Extract text from file
     const pages = await extractTextFromFile(bucket, key, userId);
     await updateFileProgress(key, 40);
+    
+    // Check minimum content length (200 characters)
+    const totalCharacters = pages.reduce((sum, page) => sum + page.text.length, 0);
+    console.log(`📊 File contains ${totalCharacters} characters`);
+    
+    if (totalCharacters < 200) {
+      console.log(`❌ File content too small: ${totalCharacters} characters (minimum 200 required)`);
+      
+      // Set error status first before cleanup
+      const errorMessage = `FILE_TOO_SMALL: File content is too small (${totalCharacters} characters). Please upload a file with at least 200 characters of meaningful content.`;
+      await updateFileError(key, errorMessage);
+      
+      // Get file record before cleanup  
+      const file = await findFileByKey(key);
+      if (file) {
+        // Small delay to allow frontend polling to catch the error status
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        await cleanupSmallContentFile(bucket, key, file.id, file.userId);
+      }
+      
+      throw new Error(errorMessage);
+    }
     
     // Count words and validate usage
     const wordCount = countWordsInPages(pages);
@@ -152,5 +180,51 @@ async function  processEmbeddings(file: any, chunks: any[], namespace: string = 
     // Update progress
     const progress = 60 + (40 * completedChunks / chunks.length);
     await updateFileProgress(file.key, Math.round(progress));
+  }
+}
+
+/**
+ * Cleanup function for files with insufficient content
+ * Removes file from S3, DynamoDB, and Pinecone
+ */
+async function cleanupSmallContentFile(bucket: string, s3Key: string, fileId: string, userId?: string): Promise<void> {
+  try {
+    console.log(`🧹 Cleaning up small content file: ${fileId}`);
+    
+    // 1. Delete from S3
+    try {
+      await s3.send(new DeleteObjectCommand({
+        Bucket: bucket,
+        Key: s3Key
+      }));
+      console.log(`✅ Deleted from S3: ${s3Key}`);
+    } catch (s3Error) {
+      console.warn(`⚠️ Failed to delete from S3: ${s3Error}`);
+    }
+    
+    // 2. Delete from Pinecone (if any chunks were created)
+    try {
+      await pineconeService.initialize();
+      await pineconeService.deleteFileChunks(fileId, userId);
+      console.log(`✅ Deleted chunks from Pinecone for file: ${fileId}`);
+    } catch (pineconeError) {
+      console.warn(`⚠️ Failed to delete from Pinecone: ${pineconeError}`);
+    }
+    
+    // 3. Delete from DynamoDB
+    try {
+      await db.send(new DeleteCommand({
+        TableName: FILES_TABLE,
+        Key: { id: fileId }
+      }));
+      console.log(`✅ Deleted from DynamoDB: ${fileId}`);
+    } catch (dbError) {
+      console.warn(`⚠️ Failed to delete from DynamoDB: ${dbError}`);
+    }
+    
+    console.log(`🎉 Successfully cleaned up file ${fileId} due to insufficient content`);
+  } catch (error) {
+    console.error(`❌ Error during cleanup of file ${fileId}:`, error);
+    // Don't throw error here - we still want the main error to be thrown
   }
 }

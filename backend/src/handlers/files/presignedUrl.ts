@@ -9,7 +9,8 @@ import {
   S3_BUCKET, 
   AWS_REGION, 
   MAX_FILE_SIZE_BYTES, 
-  ALLOWED_CONTENT_TYPES 
+  ALLOWED_CONTENT_TYPES, 
+  MAX_FILE_SIZE_MB
 } from '../../utils/constants';
 import { createErrorResponse, createSuccessResponse } from '../../utils/http';
 import { createFileRecord, updateFileById, findFileByKey } from '../../utils/files/database';
@@ -37,7 +38,7 @@ export async function generatePresignedUrl(event: APIGatewayProxyEventV2): Promi
     }
     
     if (fileSize && fileSize > MAX_FILE_SIZE_BYTES) {
-      return createErrorResponse(400, 'File too large');
+      return createErrorResponse(400, `File too large (${Math.round(fileSize / 1024 / 1024)}MB). Maximum file size is ${MAX_FILE_SIZE_MB}MB for optimal processing. Please reduce file size or split large documents.`);
     }
     
     // Check if user has any remaining word quota before allowing upload

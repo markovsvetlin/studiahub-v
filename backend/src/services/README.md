@@ -50,7 +50,7 @@ export async function extractTextFromFile(bucket: string, key: string): Promise<
 ```
 
 **Extraction Logic:**
-- **PDFs:** `pdf-parse` library (faster, more reliable)
+- **PDFs:** Hybrid approach - `pdf-parse` first, fallback to AWS Textract OCR for scanned PDFs
 - **DOCX:** `mammoth` library (preserves formatting)  
 - **Images:** AWS Textract OCR (handles scanned documents)
 
@@ -59,6 +59,7 @@ export async function extractTextFromFile(bucket: string, key: string): Promise<
 ### 📑 pdf.ts
 **Purpose:** PDF text extraction using pdf-parse library  
 **Advantages:** Fast, reliable, handles text-based PDFs well
+**Limitation:** Cannot handle scanned/image-based PDFs (requires OCR)
 
 ```typescript
 export async function extractTextFromPdf(params: { s3Bucket: string; s3Key: string }): Promise<PdfPage[]>
@@ -69,6 +70,8 @@ export async function extractTextFromPdf(params: { s3Bucket: string; s3Key: stri
 2. Extracts all text using pdf-parse
 3. Splits by form feed characters (if present)
 4. Returns structured pages
+
+**Note:** Used as first attempt in hybrid PDF processing. If minimal text is extracted (<50 chars), the system automatically falls back to Textract OCR for scanned PDFs.
 
 ### 📝 docx.ts  
 **Purpose:** Word document text extraction using mammoth  

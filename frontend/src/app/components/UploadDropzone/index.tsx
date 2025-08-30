@@ -27,8 +27,8 @@ export default function UploadDropzone({
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'image/*',
   ],
-  maxTotalBytes = 200 * 1024 * 1024,
-  caption = 'Multiple files · Max 200MB total · PDF, DOCX, Images (including HEIC)'
+  maxTotalBytes = 20 * 1024 * 1024, // 10MB per file limit
+  caption = 'Multiple files · Max 10MB per file · PDF, DOCX, Images (including HEIC)'
 }: UploadDropzoneProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -73,14 +73,19 @@ export default function UploadDropzone({
 
   const handleFiles = useCallback((incoming: FileList | File[]) => {
     const newFiles: File[] = Array.isArray(incoming) ? incoming : Array.from(incoming as FileList)
+    
+    // Check individual file sizes
+    for (const file of newFiles) {
+      if (file.size > maxTotalBytes) {
+        setError(`File "${file.name}" is too large (${formatBytes(file.size)}). Maximum file size is ${limitMB}MB for optimal processing.`)
+        return
+      }
+    }
+    
     const dedupedMap = new Map<string, File>()
     ;[...selectedFiles, ...newFiles].forEach((f) => dedupedMap.set(makeKey(f), f))
     const combined = Array.from(dedupedMap.values())
-    const total = combined.reduce((sum, f) => sum + f.size, 0)
-    if (total > maxTotalBytes) {
-      setError(`Total ${formatBytes(total)} exceeds limit ${limitMB}MB`)
-      return
-    }
+    
     setError(null)
     setSelectedFiles(combined)
     onFilesAdded?.(newFiles)

@@ -200,7 +200,7 @@ export default function UsageCard({ usage, isLoading, error }: UsageCardProps) {
           <div className="flex items-center justify-between text-xs text-neutral-400">
             <div className="flex items-center gap-1">
               <Calendar className="w-3 h-3" />
-              <span>Questions/Tokens reset on</span>
+              <span>Reset</span>
             </div>
             <span className="font-medium text-neutral-300">
               {usage.resetDateFormatted}

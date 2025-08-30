@@ -57,7 +57,13 @@ async function requestPresignedUrl(baseUrl: string, file: File, userId: string):
   
   if (!response.ok) {
     const errorText = await response.text()
-    throw new Error(`Failed to get presigned URL: ${errorText}`)
+    
+    try {
+      const errorData = JSON.parse(errorText)
+      throw new Error(errorData.message || errorText)
+    } catch {
+      throw new Error(errorText)
+    }
   }
   
   return await response.json() as PresignedUrlResponse
@@ -124,12 +130,34 @@ export async function uploadToBackend(
       console.error(`Upload failed for ${file.name}:`, error)
       updateProgress(localFileKey, PROGRESS_COMPLETED, 'error')
       
-      // Show user-friendly error toast for upload failures (not processing failures)
+      // Show user-friendly error toast with specific backend message
       const { toast } = await import('sonner')
-      toast.error('Upload Failed', {
-        description: `Failed to upload ${file.name}. Please try again.`,
-        duration: 5000
-      })
+      
+      // Extract specific error message from backend response
+      let errorMessage = `Failed to upload ${file.name}. Please try again.`
+      if (error instanceof Error) {
+        errorMessage = error.message
+      }
+      
+      // Check for specific error types
+      if (errorMessage.includes('File too large')) {
+        toast.error('File Too Large', {
+          description: errorMessage,
+          duration: 8000
+        })
+      } else if (errorMessage.includes('FILE_TOO_SMALL')) {
+        // Extract the user-friendly message after the prefix
+        const userMessage = errorMessage.replace('FILE_TOO_SMALL: ', '')
+        toast.error('Content Too Small', {
+          description: userMessage,
+          duration: 6000
+        })
+      } else {
+        toast.error('Upload Failed', {
+          description: errorMessage,
+          duration: 5000
+        })
+      }
     }
   }
 }
@@ -177,6 +205,13 @@ async function pollFileStatus(
                 description: errorMessage,
                 duration: 8000
               })
+            } else if (errorMessage.includes('FILE_TOO_SMALL')) {
+              // Extract the user-friendly message after the prefix
+              const userMessage = errorMessage.replace('FILE_TOO_SMALL: ', '')
+              toast.error('Content Too Small', {
+                description: userMessage,
+                duration: 6000
+              })
             } else {
               toast.error('File Processing Failed', {
                 description: errorMessage,
@@ -202,6 +237,18 @@ async function pollFileStatus(
             onFileDone?.(localKey)
             return // Polling complete
           }
+        } else {
+          // File not found (likely cleaned up due to validation failure)
+          updateProgress(localKey, 0, 'error')
+          
+          const { toast } = await import('sonner')
+          toast.error('Upload Failed', {
+            description: 'File was removed due to validation failure. Please check file content and try again.',
+            duration: 5000
+          })
+          
+          onFileDone?.(localKey)
+          return // Polling complete
         }
       }
     } catch (error) {
