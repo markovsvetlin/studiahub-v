@@ -3,6 +3,8 @@ import UploadDropzone from '../components/UploadDropzone'
 import FilesList from '../components/FilesList'
 import UsageCard from '@/components/usage/UsageCard'
 import SubscriptionCard from '@/components/usage/SubscriptionCard'
+import Header from '@/components/Header'
+import Footer from '@/components/Footer'
 import { UsageProvider } from '@/contexts/UsageContext'
 import { useFiles } from '@/hooks/useFiles'
 import { useUsage } from '@/hooks/useUsage'
@@ -11,15 +13,15 @@ import { useUser } from '@clerk/nextjs'
 
 export default function Dashboard() {
   return (
-    <main className="min-h-screen p-8 space-y-10">
-      <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">AI-Powered Learning Hub</h1>
-      </header>
-
-      <section className="space-y-8">
-        <MainContent />
-      </section>
-    </main>
+    <>
+      <Header />
+      <main className="min-h-screen p-8 space-y-10">
+        <section className="space-y-8">
+          <MainContent />
+        </section>
+      </main>
+      <Footer />
+    </>
   )
 }
 

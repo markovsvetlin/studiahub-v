@@ -355,7 +355,7 @@ export default function ChatInterface({ isOpen, onOpenChange, userId, hasEnabled
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetContent 
         ref={chatDrawerRef}
-        className="w-full sm:max-w-2xl p-0 bg-neutral-950 border-neutral-800 [&>button]:hidden" 
+        className="w-full sm:max-w-2xl p-0 bg-neutral-950 border-l-0 [&>button]:hidden focus:outline-none focus:ring-0" 
         side="right"
       >
         <SheetHeader className="sr-only">
