@@ -8,6 +8,34 @@ const PROGRESS_COMPLETED = 100
 // Status types
 type FileStatus = 'processing' | 'done' | 'error'
 
+// Helper function to parse error messages from JSON responses
+function parseErrorMessage(errorMessage: string): string {
+  try {
+    // Try to parse as JSON first
+    const parsed = JSON.parse(errorMessage)
+    if (parsed && typeof parsed.message === 'string') {
+      return parsed.message
+    }
+  } catch {
+    // If not JSON or no message field, check if it starts with common prefixes
+    if (errorMessage.startsWith('Failed to confirm upload: ')) {
+      const remaining = errorMessage.replace('Failed to confirm upload: ', '')
+      try {
+        const parsed = JSON.parse(remaining)
+        if (parsed && typeof parsed.message === 'string') {
+          return parsed.message
+        }
+      } catch {
+        // If still can't parse, return the remaining part
+        return remaining
+      }
+    }
+  }
+  
+  // Return original message if no parsing was successful
+  return errorMessage
+}
+
 // Interface definitions
 interface PresignedUrlResponse {
   uploadUrl: string
@@ -139,22 +167,25 @@ export async function uploadToBackend(
         errorMessage = error.message
       }
       
+      // Parse JSON error responses to extract user-friendly messages
+      const parsedError = parseErrorMessage(errorMessage)
+      
       // Check for specific error types
-      if (errorMessage.includes('File too large')) {
+      if (parsedError.includes('File too large')) {
         toast.error('File Too Large', {
-          description: errorMessage,
+          description: parsedError,
           duration: 8000
         })
-      } else if (errorMessage.includes('FILE_TOO_SMALL')) {
+      } else if (parsedError.includes('FILE_TOO_SMALL')) {
         // Extract the user-friendly message after the prefix
-        const userMessage = errorMessage.replace('FILE_TOO_SMALL: ', '')
+        const userMessage = parsedError.replace('FILE_TOO_SMALL: ', '')
         toast.error('Content Too Small', {
           description: userMessage,
           duration: 6000
         })
       } else {
         toast.error('Upload Failed', {
-          description: errorMessage,
+          description: parsedError,
           duration: 5000
         })
       }
@@ -198,23 +229,24 @@ async function pollFileStatus(
             
             // Show error notification with specific message
             const errorMessage = fileInfo.errorMessage || 'File processing failed'
+            const parsedError = parseErrorMessage(errorMessage)
             const { toast } = await import('sonner')
             
-            if (errorMessage.includes('Usage limit exceeded')) {
+            if (parsedError.includes('Usage limit exceeded')) {
               toast.error('Upload Failed - Usage Limit Exceeded', {
-                description: errorMessage,
+                description: parsedError,
                 duration: 8000
               })
-            } else if (errorMessage.includes('FILE_TOO_SMALL')) {
+            } else if (parsedError.includes('FILE_TOO_SMALL')) {
               // Extract the user-friendly message after the prefix
-              const userMessage = errorMessage.replace('FILE_TOO_SMALL: ', '')
+              const userMessage = parsedError.replace('FILE_TOO_SMALL: ', '')
               toast.error('Content Too Small', {
                 description: userMessage,
                 duration: 6000
               })
             } else {
               toast.error('File Processing Failed', {
-                description: errorMessage,
+                description: parsedError,
                 duration: 5000
               })
             }

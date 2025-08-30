@@ -135,8 +135,6 @@ function FileRow({ file, onToggleEnabled, onDelete }: FileRowProps) {
             {file.fileName}
           </div>
           <div className="text-xs text-neutral-400 flex items-center gap-2 mt-1">
-            <span>{formatBytes(file.fileSize)}</span>
-            <span>•</span>
             <span className="flex items-center gap-1">
               <Calendar className="w-3 h-3" />
               {formatDate(file.createdAt)}

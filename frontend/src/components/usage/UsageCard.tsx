@@ -48,7 +48,7 @@ function UsageMetric({ icon, label, current, limit, percentage, unit, showWarnin
         <div className="relative">
           <Progress 
             value={Math.min(percentage, 100)} 
-            className={`h-2 ${
+            className={`h-2 transition-all duration-300 ${
               isAtLimit ? 'bg-red-900/20' : 
               isNearLimit ? 'bg-amber-900/20' : 
               'bg-indigo-900/20 border border-indigo-800/30'
@@ -59,7 +59,7 @@ function UsageMetric({ icon, label, current, limit, percentage, unit, showWarnin
             <div 
               className={`absolute top-0 left-0 h-2 rounded-full ${
                 isAtLimit ? 'bg-red-500' : 'bg-amber-500'
-              } transition-all duration-300 ease-in-out`}
+              } transition-all duration-500 ease-out`}
               style={{ 
                 width: `${Math.min(percentage, 100)}%` 
               }}
@@ -68,14 +68,14 @@ function UsageMetric({ icon, label, current, limit, percentage, unit, showWarnin
         </div>
         
         <div className="flex items-center justify-between text-xs">
-          <span className={`font-medium ${
+          <span className={`font-medium transition-colors duration-300 ${
             isAtLimit ? 'text-red-400' : 
             isNearLimit ? 'text-amber-400' : 
             'text-neutral-300'
           }`}>
             {current.toLocaleString()} / {limit.toLocaleString()} {unit}
           </span>
-          <span className={`${
+          <span className={`transition-colors duration-300 ${
             isAtLimit ? 'text-red-400' : 
             isNearLimit ? 'text-amber-400' : 
             'text-neutral-500'
@@ -89,6 +89,7 @@ function UsageMetric({ icon, label, current, limit, percentage, unit, showWarnin
 }
 
 export default function UsageCard({ usage, isLoading, error }: UsageCardProps) {
+  // Early error return
   if (error) {
     return (
       <Card className="border-slate-600/50 bg-slate-700/30">
@@ -102,7 +103,8 @@ export default function UsageCard({ usage, isLoading, error }: UsageCardProps) {
     )
   }
 
-  if (isLoading) {
+  // Loading state without usage data (initial load)
+  if (isLoading && !usage) {
     return (
       <Card className="border-slate-600/50 bg-slate-700/30">
         <CardHeader>
@@ -130,6 +132,7 @@ export default function UsageCard({ usage, isLoading, error }: UsageCardProps) {
     )
   }
 
+  // No usage data available
   if (!usage) {
     return (
       <Card className="border-slate-600/50 bg-slate-700/30">
@@ -147,7 +150,17 @@ export default function UsageCard({ usage, isLoading, error }: UsageCardProps) {
                      usage.percentages.tokens >= 80
 
   return (
-    <Card className="border-slate-600/50 bg-slate-700/30 hover:bg-slate-600/40 transition-all duration-300">
+    <Card className="border-slate-600/50 bg-slate-700/30 hover:bg-slate-600/40 transition-all duration-300 relative">
+      {/* Loading overlay that preserves layout */}
+      {isLoading && (
+        <div className="absolute inset-0 bg-slate-700/70 backdrop-blur-sm rounded-lg flex items-center justify-center z-10 transition-all duration-200">
+          <div className="flex items-center gap-2 text-white">
+            <div className="w-4 h-4 border-2 border-indigo-400/30 border-t-indigo-400 rounded-full animate-spin" />
+            <span className="text-sm font-medium">Updating...</span>
+          </div>
+        </div>
+      )}
+      
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-white text-lg flex items-center gap-2">

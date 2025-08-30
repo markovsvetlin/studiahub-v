@@ -22,7 +22,7 @@ export default function Dashboard() {
 }
 
 function MainContent() {
-  const { user } = useUser()
+  const { user, isLoaded } = useUser()
   const { usage, isLoading: usageLoading, error: usageError, refreshUsage } = useUsage(user?.id)
   const { files, isLoading, error, toggleFileEnabled, deleteFile, refreshFiles } = useFiles(user?.id, refreshUsage)
 
@@ -31,6 +31,19 @@ function MainContent() {
     refreshUsage() // Refresh usage after file upload
   }
 
+  // Show loading spinner while authentication state is being determined
+  if (!isLoaded) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-2 border-indigo-400/30 border-t-indigo-400 rounded-full animate-spin" />
+          <p className="text-neutral-400 text-sm">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show sign-in message only after we've confirmed user is not authenticated
   if (!user) {
     return (
       <div className="max-w-4xl mx-auto p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-center">
