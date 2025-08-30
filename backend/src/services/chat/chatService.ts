@@ -1,4 +1,4 @@
-import { findRelevantChunks } from '../files/pinecone'
+import { findRelevantChunks } from '../files/ChatSearchService'
 import { getUserEnabledFiles } from '../../utils/files/database'
 import { getConversationContext } from '../../utils/chat/messages'
 

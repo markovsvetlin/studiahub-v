@@ -1,4 +1,4 @@
-import type { PageContent } from '../../services/files/textExtraction'
+import type { PageContent } from '../../services/files/TextExtractionService'
 
 /**
  * Count words in text using simple but accurate method

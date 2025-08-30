@@ -1,6 +1,9 @@
 import { pineconeService } from '../../services/files/pinecone'
-import { embedOpenAI } from '../../services/files/embeddings'
+import { EmbeddingService } from '../../services/files/EmbeddingService'
 import { getEnabledFileIds } from '../../utils/files/database'
+
+// Create embedding service instance
+const embeddingService = new EmbeddingService()
 
 // Constants
 const SEARCH_MULTIPLIER = 4
@@ -98,7 +101,7 @@ async function searchFocusedChunks(
   console.log(`🎯 Searching for "${focusArea}" content`)
   
   // Generate embedding for focus area
-  const [focusEmbedding] = await embedOpenAI([focusArea])
+  const [focusEmbedding] = await embeddingService.generateEmbeddings([focusArea])
   
   // Search with file filtering
   const searchCount = Math.min(questionCount * SEARCH_MULTIPLIER, MAX_SEARCH_RESULTS)

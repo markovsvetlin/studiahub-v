@@ -1,7 +1,7 @@
 import { APIGatewayProxyHandlerV2 } from 'aws-lambda'
 import { createMessage, createOrUpdateConversation, getConversationMessages } from '../../utils/chat/database'
 import { generateChatResponse, ChatContext } from '../../services/chat/gpt'
-import { findRelevantChunks } from '../../services/files/pinecone'
+import { findRelevantChunks } from '../../services/files/ChatSearchService'
 import { getUserEnabledFiles } from '../../utils/files/database'
 import { createSuccessResponse, createErrorResponse } from '../../utils/http'
 import { v4 as uuidv4 } from 'uuid'

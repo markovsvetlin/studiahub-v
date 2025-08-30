@@ -3,12 +3,10 @@
  */
 
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
-import { S3_BUCKET, AWS_REGION } from '../../utils/constants';
 import { createErrorResponse, createSuccessResponse } from '../../utils/http';
+import { S3Service } from '../../services/files/S3Service';
 
-const s3 = new S3Client({ region: AWS_REGION });
-
+const s3Service = new S3Service();
 
 export async function get(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
   try {
@@ -24,16 +22,11 @@ export async function get(event: APIGatewayProxyEventV2): Promise<APIGatewayProx
       const file = await findFileByKey(fileKey);
       return createSuccessResponse({ file });
     } else {
-      const response = await s3.send(new GetObjectCommand({
-        Bucket: S3_BUCKET,
-        Key: fileKey
-      }));
-      
-      const content = await response.Body?.transformToString();
+      const content = await s3Service.getFileContent(fileKey);
       return {
         statusCode: 200,
         headers: { 'content-type': 'text/plain' },
-        body: content || ''
+        body: content
       };
     }
   } catch (error) {
