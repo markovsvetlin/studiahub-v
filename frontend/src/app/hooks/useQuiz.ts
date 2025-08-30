@@ -148,7 +148,7 @@ export function useQuiz(userId: string | undefined) {
     } catch (error) {
       // Check for usage limit errors
       if (error instanceof Error && error.message.includes('Usage limit exceeded')) {
-        toast.error('Quiz Generation Failed - Usage Limit Exceeded', {
+        toast.error('Usage Limit Exceeded', {
           description: error.message,
           duration: 8000
         })

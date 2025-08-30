@@ -11,9 +11,9 @@ export const getUserUsageHandler: APIGatewayProxyHandlerV2 = async (event) => {
       return createErrorResponse(400, 'userId is required')
     }
 
-    // Get user usage and limits
+    // Get user usage and limits (limits depend on subscription plan)
     const usage = await getUserUsage(userId)
-    const limits = getUsageLimits()
+    const limits = await getUsageLimits(userId)
     
     // Calculate percentages
     const wordsPercentage = Math.round((usage.wordsUsed / limits.words) * 100)

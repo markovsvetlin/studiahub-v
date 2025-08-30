@@ -112,9 +112,7 @@ export const sendMessage: APIGatewayProxyHandlerV2 = async (event) => {
 
     console.log(`✅ Created user message: ${userMessage.messageId}`)
 
-    // Validate token usage before generating response
-    // Estimate tokens (we'll validate with actual usage after)
-    const estimatedTokens = 3000; // Conservative estimate
+    const estimatedTokens = 10; // Conservative estimate
     const tokenValidation = await validateUsage(userId, 'tokens', estimatedTokens);
     if (!tokenValidation.canProceed) {
       return createErrorResponse(429, tokenValidation.message!);

@@ -10,11 +10,29 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
+      richColors
+      closeButton
+      expand={true}
+      visibleToasts={5}
+      duration={4000}
+      gap={12}
       style={
         {
-          "--normal-bg": "var(--popover)",
-          "--normal-text": "var(--popover-foreground)",
+          "--normal-bg": "var(--card)",
+          "--normal-text": "var(--card-foreground)",
           "--normal-border": "var(--border)",
+          "--success-bg": "var(--card)",
+          "--success-text": "rgb(34, 197, 94)",
+          "--success-border": "rgba(34, 197, 94, 0.3)",
+          "--error-bg": "var(--card)",
+          "--error-text": "rgb(239, 68, 68)",
+          "--error-border": "rgba(239, 68, 68, 0.3)",
+          "--warning-bg": "var(--card)",
+          "--warning-text": "rgb(245, 158, 11)",
+          "--warning-border": "rgba(245, 158, 11, 0.3)",
+          "--info-bg": "var(--card)",
+          "--info-text": "rgb(59, 130, 246)",
+          "--info-border": "rgba(59, 130, 246, 0.3)",
         } as React.CSSProperties
       }
       {...props}

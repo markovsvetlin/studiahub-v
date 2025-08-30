@@ -57,7 +57,16 @@ const generateQuiz = async (quizData: QuizData) => {
       'Content-Type': 'application/json'
     }
   })
+  
   const data = await response.json()
+  
+  // Check for API errors (including usage limit exceeded)
+  if (!response.ok || !data.ok) {
+    const errorMessage = data.message || `Quiz generation failed: ${response.status}`
+    console.error('❌ Quiz generation API error:', errorMessage)
+    throw new Error(errorMessage)
+  }
+  
   console.log('🚀 Quiz generation started:', data)
   return data
 }

@@ -69,7 +69,8 @@ const DIFFICULTY_SPECS = {
 export function parseQuizResponse(
   gptResponse: string, 
   chunks: ChunkContent[], 
-  expectedCount: number
+  expectedCount: number,
+  difficulty: 'easy' | 'medium' | 'hard'
 ): QuizQuestion[] {
   try {
     // Try direct JSON parse first, fallback to regex extraction
@@ -98,7 +99,7 @@ export function parseQuizResponse(
         question: q.question.trim(),
         options: q.options.map((opt: string) => opt.trim()),
         correctIndex: q.correctIndex,
-        difficulty: q.difficulty || 'medium',
+        difficulty: difficulty, // Use the actual difficulty from metadata instead of defaulting to 'medium'
         topic: q.topic
       };
     });

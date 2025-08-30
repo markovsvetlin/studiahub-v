@@ -2,9 +2,11 @@
 import UploadDropzone from '../components/UploadDropzone'
 import FilesList from '../components/FilesList'
 import UsageCard from '@/components/usage/UsageCard'
+import SubscriptionCard from '@/components/usage/SubscriptionCard'
 import { UsageProvider } from '@/contexts/UsageContext'
 import { useFiles } from '@/hooks/useFiles'
 import { useUsage } from '@/hooks/useUsage'
+import { useSubscription } from '@/hooks/useSubscription'
 import { useUser } from '@clerk/nextjs'
 
 export default function Dashboard() {
@@ -25,10 +27,36 @@ function MainContent() {
   const { user, isLoaded } = useUser()
   const { usage, isLoading: usageLoading, error: usageError, refreshUsage } = useUsage(user?.id)
   const { files, isLoading, error, toggleFileEnabled, deleteFile, refreshFiles } = useFiles(user?.id, refreshUsage)
+  const { 
+    subscription, 
+    isLoading: subscriptionLoading, 
+    error: subscriptionError, 
+    handleUpgrade, 
+    handleCancel,
+    handleRenew 
+  } = useSubscription(user?.id)
 
   const handleUploadComplete = () => {
     refreshFiles()
     refreshUsage() // Refresh usage after file upload
+  }
+
+  const handleCancelSubscription = async () => {
+    try {
+      await handleCancel()
+      console.log('Subscription cancelled successfully')
+    } catch (error) {
+      console.error('Failed to cancel subscription:', error)
+    }
+  }
+
+  const handleRenewSubscription = async () => {
+    try {
+      await handleRenew()
+      console.log('Subscription renewed successfully')
+    } catch (error) {
+      console.error('Failed to renew subscription:', error)
+    }
   }
 
   // Show loading spinner while authentication state is being determined
@@ -56,9 +84,17 @@ function MainContent() {
     <UsageProvider refreshUsage={refreshUsage}>
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col lg:flex-row gap-8 items-start">
-          {/* Left side - Usage Card */}
-          <div className="lg:w-80 w-full flex-shrink-0">
+          {/* Left side - Usage & Subscription Cards */}
+          <div className="lg:w-80 w-full flex-shrink-0 space-y-6">
             <UsageCard usage={usage} isLoading={usageLoading} error={usageError} />
+            <SubscriptionCard 
+              subscription={subscription}
+              isLoading={subscriptionLoading}
+              error={subscriptionError}
+              onUpgrade={handleUpgrade}
+              onCancel={handleCancelSubscription}
+              onRenew={handleRenewSubscription}
+            />
           </div>
           
           {/* Center - Main Content */}

@@ -1,5 +1,6 @@
 import { db } from '../../db'
 import { PutCommand, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb'
+import { getUserSubscription } from '../subscriptions/database'
 
 const USAGE_TABLE = process.env.USAGE_TABLE!
 
@@ -20,14 +21,42 @@ export interface UsageLimits {
 }
 
 /**
- * Get usage limits for free tier (for now, all users)
+ * Get usage limits based on user's subscription plan
  */
-export function getUsageLimits(): UsageLimits {
-  return {
+export async function getUsageLimits(userId?: string): Promise<UsageLimits> {
+  // Default to free tier limits
+  const freeTierLimits = {
     words: parseInt(process.env.FREE_TIER_WORDS_LIMIT || '100000'),
     questions: parseInt(process.env.FREE_TIER_QUESTIONS_LIMIT || '50'),
     tokens: parseInt(process.env.FREE_TIER_TOKENS_LIMIT || '50000')
   }
+
+  // If no userId provided, return free tier limits
+  if (!userId) {
+    return freeTierLimits
+  }
+
+  try {
+    const subscription = await getUserSubscription(userId)
+    
+    // Check if user has Pro access (including cancelled but not expired)
+    const hasProAccess = subscription.plan === 'pro' && subscription.status === 'active' && (
+      !subscription.cancelAtPeriodEnd || 
+      (subscription.currentPeriodEnd && new Date() < new Date(subscription.currentPeriodEnd))
+    )
+    
+    if (hasProAccess) {
+      return {
+        words: parseInt(process.env.PRO_TIER_WORDS_LIMIT || '1000000'),
+        questions: parseInt(process.env.PRO_TIER_QUESTIONS_LIMIT || '500'),
+        tokens: parseInt(process.env.PRO_TIER_TOKENS_LIMIT || '500000')
+      }
+    }
+  } catch (error) {
+    console.error('Error getting user subscription for limits:', error)
+  }
+
+  return freeTierLimits
 }
 
 /**
@@ -210,7 +239,7 @@ export async function validateUsage(
 ): Promise<{ canProceed: boolean; message?: string; usage?: UsageRecord }> {
   try {
     const usage = await getUserUsage(userId)
-    const limits = getUsageLimits()
+    const limits = await getUsageLimits(userId)
     
     let currentUsage: number
     let limit: number

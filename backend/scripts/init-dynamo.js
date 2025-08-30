@@ -19,6 +19,7 @@ const itemsTableName = `${service}-${stage}-items`;
 const filesTableName = `${service}-${stage}-files`;
 const quizTableName = `${service}-${stage}-quizzes`;
 const usageTableName = `${service}-${stage}-usage`;
+const subscriptionsTableName = `${service}-${stage}-subscriptions`;
 const chatTableName = `${service}-${stage}-chat`;
 const conversationsTableName = `${service}-${stage}-conversations`;
 
@@ -123,6 +124,35 @@ async function main() {
     ],
     KeySchema: [
       { AttributeName: "userId", KeyType: "HASH" },
+    ],
+    BillingMode: "PAY_PER_REQUEST",
+  });
+
+  await ensureTable({
+    TableName: subscriptionsTableName,
+    AttributeDefinitions: [
+      { AttributeName: "userId", AttributeType: "S" },
+      { AttributeName: "stripeCustomerId", AttributeType: "S" },
+      { AttributeName: "stripeSubscriptionId", AttributeType: "S" },
+    ],
+    KeySchema: [
+      { AttributeName: "userId", KeyType: "HASH" },
+    ],
+    GlobalSecondaryIndexes: [
+      {
+        IndexName: "stripe-customer-index",
+        KeySchema: [
+          { AttributeName: "stripeCustomerId", KeyType: "HASH" },
+        ],
+        Projection: { ProjectionType: "ALL" },
+      },
+      {
+        IndexName: "stripe-subscription-index",
+        KeySchema: [
+          { AttributeName: "stripeSubscriptionId", KeyType: "HASH" },
+        ],
+        Projection: { ProjectionType: "ALL" },
+      },
     ],
     BillingMode: "PAY_PER_REQUEST",
   });

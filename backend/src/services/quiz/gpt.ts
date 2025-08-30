@@ -70,7 +70,7 @@ export async function generateQuizQuestions(context: PromptContext): Promise<Qui
     console.log(`📝 Received GPT response in ${gptDuration}ms, parsing questions...`);
     
     const parseStartTime = Date.now();
-    const questions = parseQuizResponse(content, context.chunks, context.questionCount);
+    const questions = parseQuizResponse(content, context.chunks, context.questionCount, context.metadata.difficulty);
     const parseDuration = Date.now() - parseStartTime;
     
     const totalDuration = Date.now() - startTime;
