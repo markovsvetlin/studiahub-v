@@ -65,14 +65,6 @@ export default function StructuredData({ type }: StructuredDataProps) {
           name: 'StudiaHub',
           url: baseUrl,
           description: 'AI-powered learning platform that transforms study materials into personalized quizzes',
-          potentialAction: {
-            '@type': 'SearchAction',
-            target: {
-              '@type': 'EntryPoint',
-              urlTemplate: `${baseUrl}/search?q={search_term_string}`
-            },
-            'query-input': 'required name=search_term_string'
-          },
           publisher: {
             '@type': 'Organization',
             name: 'StudiaHub',
