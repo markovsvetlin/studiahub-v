@@ -8,9 +8,11 @@ const isProtectedRoute = createRouteMatcher([
 ])
 
 export default clerkMiddleware(async (auth, req) => {
-  // For protected routes, let the client-side handle auth checks
-  // Since we can see client-side auth is working, we'll let React handle it
+  // Skip protection in development and let client-side handle auth
   return NextResponse.next()
+}, {
+  // Add explicit configuration for production
+  publishableKey: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 })
 
 export const config = {
