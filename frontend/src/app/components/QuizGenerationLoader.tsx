@@ -225,7 +225,7 @@ export default function QuizGenerationLoader({
           <div className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse"></div>
           <span>
             {progress < 50 
-              ? 'This usually takes 30-60 seconds' 
+              ? 'This usually takes 10-20 seconds' 
               : progress < 80 
                 ? 'Almost there! Just a few more moments...'
                 : 'Finalizing your quiz...'}

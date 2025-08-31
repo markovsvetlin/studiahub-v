@@ -22,6 +22,7 @@ const usageTableName = `${service}-${stage}-usage`;
 const subscriptionsTableName = `${service}-${stage}-subscriptions`;
 const chatTableName = `${service}-${stage}-chat`;
 const conversationsTableName = `${service}-${stage}-conversations`;
+const messagesTableName = `${service}-${stage}-messages`;
 
 const client = new DynamoDBClient({ region, endpoint });
 
@@ -162,6 +163,7 @@ async function main() {
     AttributeDefinitions: [
       { AttributeName: "id", AttributeType: "S" },
       { AttributeName: "userId", AttributeType: "S" },
+      { AttributeName: "conversationId", AttributeType: "S" },
     ],
     KeySchema: [
       { AttributeName: "id", KeyType: "HASH" },
@@ -174,6 +176,13 @@ async function main() {
         ],
         Projection: { ProjectionType: "ALL" },
       },
+      {
+        IndexName: "conversation-index",
+        KeySchema: [
+          { AttributeName: "conversationId", KeyType: "HASH" },
+        ],
+        Projection: { ProjectionType: "ALL" },
+      },
     ],
     BillingMode: "PAY_PER_REQUEST",
   });
@@ -183,15 +192,40 @@ async function main() {
     AttributeDefinitions: [
       { AttributeName: "conversationId", AttributeType: "S" },
       { AttributeName: "userId", AttributeType: "S" },
+      { AttributeName: "lastMessageAt", AttributeType: "N" },
     ],
     KeySchema: [
       { AttributeName: "conversationId", KeyType: "HASH" },
     ],
     GlobalSecondaryIndexes: [
       {
-        IndexName: "user-index",
+        IndexName: "user-conversations-index",
         KeySchema: [
           { AttributeName: "userId", KeyType: "HASH" },
+          { AttributeName: "lastMessageAt", KeyType: "RANGE" },
+        ],
+        Projection: { ProjectionType: "ALL" },
+      },
+    ],
+    BillingMode: "PAY_PER_REQUEST",
+  });
+
+  await ensureTable({
+    TableName: messagesTableName,
+    AttributeDefinitions: [
+      { AttributeName: "conversationId", AttributeType: "S" },
+      { AttributeName: "timestamp", AttributeType: "N" },
+      { AttributeName: "messageId", AttributeType: "S" },
+    ],
+    KeySchema: [
+      { AttributeName: "conversationId", KeyType: "HASH" },
+      { AttributeName: "timestamp", KeyType: "RANGE" },
+    ],
+    GlobalSecondaryIndexes: [
+      {
+        IndexName: "message-id-index",
+        KeySchema: [
+          { AttributeName: "messageId", KeyType: "HASH" },
         ],
         Projection: { ProjectionType: "ALL" },
       },

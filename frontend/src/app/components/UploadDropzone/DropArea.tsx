@@ -27,8 +27,8 @@ export function DropArea({ isDragging, setIsDragging, onFiles, onOpenPicker, cap
       onDrop={(e) => { e.preventDefault(); setIsDragging(false); onFiles(e.dataTransfer.files) }}
       onClick={() => onOpenPicker()}
       className={cn(
-        'cursor-pointer rounded-2xl border-2 border-dashed transition-colors',
-        'min-h-56 flex items-center justify-center text-center',
+        'cursor-pointer rounded-xl sm:rounded-2xl border-2 border-dashed transition-colors',
+        'min-h-48 sm:min-h-56 flex items-center justify-center text-center',
         'bg-neutral-950/40 border-neutral-800 hover:bg-neutral-900/60',
         isDragging && 'bg-neutral-900 border-neutral-500'
       )}
@@ -37,22 +37,22 @@ export function DropArea({ isDragging, setIsDragging, onFiles, onOpenPicker, cap
       aria-label="Upload files"
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpenPicker() } }}
     >
-      <div className="flex flex-col items-center gap-2 px-6 py-10">
-        <Upload className="h-10 w-10 text-indigo-400" />
+      <div className="flex flex-col items-center gap-3 px-4 sm:px-6 py-8 sm:py-10">
+        <Upload className="h-8 w-8 sm:h-10 sm:w-10 text-indigo-400" />
         {selectedCount === 0 ? (
           <>
-            <div className="text-sm font-medium text-neutral-200">Drop files here or click to upload</div>
-            <div className="text-xs text-neutral-400">{caption}</div>
-            <div className="mt-3 flex items-center gap-2">
-              <span className="rounded-full bg-neutral-800 text-neutral-200 text-xs px-3 py-1 border border-neutral-700">Documents</span>
-              <span className="rounded-full bg-neutral-800 text-neutral-200 text-xs px-3 py-1 border border-neutral-700">Images</span>
+            <div className="text-sm sm:text-base font-medium text-neutral-200">Drop files here or click to upload</div>
+            <div className="text-xs sm:text-sm text-neutral-400 max-w-xs sm:max-w-md text-center leading-relaxed">{caption}</div>
+            <div className="mt-2 sm:mt-3 flex flex-wrap items-center justify-center gap-2">
+              <span className="rounded-full bg-neutral-800 text-neutral-200 text-xs px-3 py-1.5 border border-neutral-700">Documents</span>
+              <span className="rounded-full bg-neutral-800 text-neutral-200 text-xs px-3 py-1.5 border border-neutral-700">Images</span>
             </div>
           </>
         ) : (
           <>
-            <div className="text-sm font-medium text-neutral-200">{selectedCount} file{selectedCount > 1 ? 's' : ''} selected</div>
-            <div className="text-xs text-neutral-400">Total: {formatBytes(totalBytes)} of {limitMB}MB</div>
-            <div className="text-xs text-neutral-500">Click or drag to add more files</div>
+            <div className="text-sm sm:text-base font-medium text-neutral-200">{selectedCount} file{selectedCount > 1 ? 's' : ''} selected</div>
+            <div className="text-xs sm:text-sm text-neutral-400">Total: {formatBytes(totalBytes)} of {limitMB}MB</div>
+            <div className="text-xs sm:text-sm text-neutral-500">Click or drag to add more files</div>
           </>
         )}
       </div>

@@ -1,6 +1,5 @@
 'use client'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useSignIn, useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
@@ -15,7 +14,7 @@ import {
 
 export default function Home() {
   const { signIn } = useSignIn()
-  const { isSignedIn, user, isLoaded } = useUser()
+  const { isSignedIn, user } = useUser()
   const router = useRouter()
 
 
@@ -55,9 +54,9 @@ export default function Home() {
       {/* Subtle overlay for depth */}
       <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/10 via-transparent to-purple-950/10" />
       
-      <main className="relative z-10">
+      <main className="relative z-10" id="main-content">
         {/* Hero & Welcome Section - Side by Side */}
-        <section className="py-20 px-8">
+        <section className="py-20 px-8" aria-label="Hero section">
           <div className="max-w-6xl mx-auto">
             <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
               {/* Left Side - Hero Content */}
@@ -90,7 +89,7 @@ export default function Home() {
               </div>
 
               {/* Right Side - Welcome Back */}
-              <div className="flex justify-center lg:justify-end">
+              <aside className="flex justify-center lg:justify-end" aria-label="User authentication">
                 <div className="w-full max-w-sm">
                   <div className="bg-slate-800/40 backdrop-blur-xl border border-slate-600/50 rounded-2xl p-8 space-y-6 shadow-2xl shadow-black/20">
                     <div className="text-center space-y-2">
@@ -114,72 +113,72 @@ export default function Home() {
                     </Button>
                   </div>
                 </div>
-              </div>
+              </aside>
             </div>
           </div>
         </section>
 
         {/* Features Section */}
-        <section className="py-20 px-8">
+        <section className="py-20 px-8" aria-label="Product features">
           <div className="max-w-6xl mx-auto space-y-16">
-            <div className="text-center space-y-4">
+            <header className="text-center space-y-4">
               <h2 className="text-4xl font-bold text-white">Why StudiaHub Accelerates Learning</h2>
               <p className="text-xl text-slate-300 max-w-2xl mx-auto">
                 Our AI doesn&apos;t just process your content—it understands it and creates the most effective learning experience possible.
               </p>
-            </div>
+            </header>
             
-            <div className="grid md:grid-cols-3 gap-8">
-              <Card className="border-slate-600/50 bg-slate-700/30 hover:bg-slate-600/40 transition-all duration-300 backdrop-blur-sm">
-                <CardHeader>
+            <div className="grid md:grid-cols-3 gap-8" role="list" aria-label="Key features">
+              <article className="border-slate-600/50 bg-slate-700/30 hover:bg-slate-600/40 transition-all duration-300 backdrop-blur-sm rounded-lg" role="listitem">
+                <div className="p-6">
                   <div className="w-12 h-12 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center mb-4">
                     <Brain className="w-6 h-6 text-indigo-400" />
                   </div>
-                  <CardTitle className="text-white">AI Quiz Generation</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <p className="text-slate-300">
-                    Advanced AI analyzes your content and generates personalized quizzes that target your knowledge gaps.
-                  </p>
-                  <div className="pt-2">
-                    <Badge variant="secondary" className="text-xs bg-indigo-500/20 text-indigo-300">Powered by OpenAI</Badge>
+                  <h3 className="text-white text-xl font-semibold mb-4">AI Quiz Generation</h3>
+                  <div className="space-y-2">
+                    <p className="text-slate-300">
+                      Advanced AI analyzes your content and generates personalized quizzes that target your knowledge gaps.
+                    </p>
+                    <div className="pt-2">
+                      <Badge variant="secondary" className="text-xs bg-indigo-500/20 text-indigo-300">Powered by OpenAI</Badge>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </article>
 
-              <Card className="border-slate-600/50 bg-slate-700/30 hover:bg-slate-600/40 transition-all duration-300 backdrop-blur-sm">
-                <CardHeader>
+              <article className="border-slate-600/50 bg-slate-700/30 hover:bg-slate-600/40 transition-all duration-300 backdrop-blur-sm rounded-lg" role="listitem">
+                <div className="p-6">
                   <div className="w-12 h-12 rounded-lg bg-purple-500/20 border border-purple-500/30 flex items-center justify-center mb-4">
                     <Target className="w-6 h-6 text-purple-400" />
                   </div>
-                  <CardTitle className="text-white">Smart Focus Areas</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <p className="text-slate-300">
-                    Set specific topics or subjects for targeted learning. The AI adapts quiz difficulty and focus accordingly.
-                  </p>
-                  <div className="pt-2">
-                    <Badge variant="secondary" className="text-xs bg-purple-500/20 text-purple-300">Adaptive Learning</Badge>
+                  <h3 className="text-white text-xl font-semibold mb-4">Smart Focus Areas</h3>
+                  <div className="space-y-2">
+                    <p className="text-slate-300">
+                      Set specific topics or subjects for targeted learning. The AI adapts quiz difficulty and focus accordingly.
+                    </p>
+                    <div className="pt-2">
+                      <Badge variant="secondary" className="text-xs bg-purple-500/20 text-purple-300">Adaptive Learning</Badge>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </article>
 
-              <Card className="border-slate-600/50 bg-slate-700/30 hover:bg-slate-600/40 transition-all duration-300 backdrop-blur-sm">
-                <CardHeader>
+              <article className="border-slate-600/50 bg-slate-700/30 hover:bg-slate-600/40 transition-all duration-300 backdrop-blur-sm rounded-lg" role="listitem">
+                <div className="p-6">
                   <div className="w-12 h-12 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center mb-4">
                     <Zap className="w-6 h-6 text-emerald-400" />
                   </div>
-                  <CardTitle className="text-white">10x Learning Speed</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <p className="text-slate-300">
-                    Scientifically optimized quiz formats designed for maximum retention and accelerated learning.
-                  </p>
-                  <div className="pt-2">
-                    <Badge variant="secondary" className="text-xs bg-emerald-500/20 text-emerald-300">Evidence-Based</Badge>
+                  <h3 className="text-white text-xl font-semibold mb-4">10x Learning Speed</h3>
+                  <div className="space-y-2">
+                    <p className="text-slate-300">
+                      Scientifically optimized quiz formats designed for maximum retention and accelerated learning.
+                    </p>
+                    <div className="pt-2">
+                      <Badge variant="secondary" className="text-xs bg-emerald-500/20 text-emerald-300">Evidence-Based</Badge>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </article>
             </div>
           </div>
         </section>
@@ -187,7 +186,7 @@ export default function Home() {
        
 
         {/* CTA Section */}
-        <section className="py-20 px-8">
+        <section className="py-20 px-8" aria-label="Call to action">
           <div className="max-w-4xl mx-auto text-center space-y-8">
             <h2 className="text-4xl font-bold text-white">Ready to Transform Your Learning?</h2>
             <p className="text-xl text-slate-300">
@@ -210,7 +209,7 @@ export default function Home() {
         </section>
 
         {/* Footer */}
-        <footer className="py-12 px-8 border-t border-slate-700/30">
+        <footer className="py-12 px-8 border-t border-slate-700/30" role="contentinfo" aria-label="Site footer">
           <div className="max-w-6xl mx-auto">
             <div className="grid md:grid-cols-3 gap-8 items-start">
               {/* Left - Brand & Contact */}

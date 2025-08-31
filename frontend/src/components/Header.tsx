@@ -14,8 +14,12 @@ import {
   ChevronDown
 } from 'lucide-react'
 
-export default function Header() {
-  const { isSignedIn, user } = useUser()
+interface HeaderProps {
+  mobileMetricsButton?: React.ReactNode
+}
+
+export default function Header({ mobileMetricsButton }: HeaderProps) {
+  const { user } = useUser()
   const { signOut } = useClerk()
   const { signIn } = useSignIn()
 
@@ -34,11 +38,16 @@ export default function Header() {
   }
 
   return (
-    <header className="border-b border-slate-600/50 bg-slate-800/50 backdrop-blur-sm sticky top-0 z-50">
+    <header className="border-b border-slate-600/50 bg-slate-800/50 backdrop-blur-sm sticky top-0 z-50" role="banner">
       <div className="max-w-7xl mx-auto px-6 py-4">
-        <div className="flex items-center justify-between">
-          {/* Logo */}
-          <Link href="/dashboard" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
+        <nav className="flex items-center justify-between" role="navigation" aria-label="Main navigation">
+          {/* Left Section - Mobile Metrics Button + Logo */}
+          <div className="flex items-center space-x-3">
+            {/* Mobile Metrics Button */}
+            {mobileMetricsButton}
+            
+            {/* Logo */}
+            <Link href="/dashboard" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
             <Image
               src="/logo4.png"
               alt="StudiaHub"
@@ -46,10 +55,11 @@ export default function Header() {
               height={40}
               className="rounded-lg"
             />
-            <span className="text-xl font-bold text-white hidden sm:block">
-              StudiaHub
-            </span>
-          </Link>
+              <span className="text-xl font-bold text-white hidden sm:block">
+                StudiaHub
+              </span>
+            </Link>
+          </div>
 
           {/* User Section */}
           <div className="flex items-center space-x-4">
@@ -126,7 +136,7 @@ export default function Header() {
               </div>
             )}
           </div>
-        </div>
+        </nav>
       </div>
     </header>
   )

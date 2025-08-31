@@ -389,7 +389,7 @@ export class QuizService {
     // Get enabled files
     const enabledFileIds = await getEnabledFileIds(userId);
     if (enabledFileIds.length === 0) {
-      throw new Error('No enabled files found. Please enable at least one file in the context pool.');
+      throw new Error('Cannot generate quiz because no files are currently enabled. Please enable at least one file from your uploaded documents.');
     }
     
     let searchResults: any[];
@@ -431,12 +431,23 @@ export class QuizService {
   }): Promise<QuizQuestion[]> {
     const { chunks, metadata } = context;
     
+    // Validate that we have chunks to work with
+    if (!chunks || chunks.length === 0) {
+      throw new Error('Cannot generate quiz because no files are currently enabled. Please enable at least one file from your uploaded documents to create a quiz.');
+    }
+    
+    // Additional validation to ensure chunks have actual text content
+    const validChunks = chunks.filter(chunk => chunk.text && chunk.text.trim().length > 0);
+    if (validChunks.length === 0) {
+      throw new Error('Cannot generate quiz because the selected files do not contain readable text content. Please check that your files have been processed successfully.');
+    }
+    
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
       throw new Error('OPENAI_API_KEY not configured');
     }
 
-    const prompt = this.createQuizPrompt(chunks, metadata);
+    const prompt = this.createQuizPrompt(validChunks, metadata);
     
 
 
@@ -480,6 +491,12 @@ export class QuizService {
 
   private createQuizPrompt(chunks: ChunkContent[], metadata: QuizMetadata): string {
     const difficultySpec = this.getDifficultySpec(metadata.difficulty);
+    
+    // Double-check that we have valid chunks before creating the prompt
+    if (!chunks || chunks.length === 0) {
+      throw new Error('Cannot create quiz because no document content is available. Please enable files for quiz generation.');
+    }
+    
     const sources = chunks.map((chunk, i) => 
       `=== Source ${i + 1}: ${chunk.fileName} ===\n${chunk.text}`
     ).join('\n\n');

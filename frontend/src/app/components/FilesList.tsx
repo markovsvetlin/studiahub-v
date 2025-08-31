@@ -22,6 +22,7 @@ import { FileListItem, FileListProps, SortField, SortDirection } from '@/types/f
 import { useUser } from "@clerk/nextjs";
 import QuizDrawer from './QuizDrawer'
 import QuizQuestions from './QuizQuestions'
+import QuizPreviewModal from './QuizPreviewModal'
 import QuizList from './QuizList'
 import QuizGenerationLoader from './QuizGenerationLoader'
 import { useQuiz } from '../hooks/useQuiz'
@@ -121,17 +122,17 @@ function FileRow({ file, onToggleEnabled, onDelete }: FileRowProps) {
   
   return (
     <div className={cn(
-      "flex items-center gap-4 p-4 rounded-lg border transition-all",
+      "flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg border transition-all",
       "bg-neutral-900/30 border-neutral-800 hover:bg-neutral-800/50",
       !file.isEnabled && "opacity-60"
     )}>
       {/* File Icon & Name */}
-      <div className="flex items-center gap-3 min-w-0 flex-1">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
         <div className="flex-shrink-0">
           {getFileIcon(file.contentType, "w-5 h-5")}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="font-medium text-neutral-200 truncate">
+          <div className="font-medium text-neutral-200 truncate text-sm sm:text-base">
             {file.fileName}
           </div>
           <div className="text-xs text-neutral-400 flex items-center gap-2 mt-1">
@@ -149,13 +150,13 @@ function FileRow({ file, onToggleEnabled, onDelete }: FileRowProps) {
       <div className="flex-shrink-0">
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <Switch
                 checked={file.isEnabled}
                 onCheckedChange={(enabled) => onToggleEnabled(file.id, enabled)}
-                className="data-[state=checked]:bg-indigo-500"
+                className="data-[state=checked]:bg-indigo-500 scale-90 sm:scale-100"
               />
-              <span className="text-xs text-neutral-400 hidden sm:inline">
+              <span className="text-xs text-neutral-400 hidden md:inline">
                 {file.isEnabled ? 'Active' : 'Inactive'}
               </span>
             </div>
@@ -178,12 +179,12 @@ function FileRow({ file, onToggleEnabled, onDelete }: FileRowProps) {
               size="sm"
               onClick={handleDelete}
               disabled={isDeleting}
-              className="text-neutral-400 hover:text-red-400 hover:bg-red-500/10 p-2"
+              className="text-neutral-400 hover:text-red-400 hover:bg-red-500/10 p-1.5 sm:p-2"
             >
               {isDeleting ? (
-                <Loader2 className="w-6 h-6 animate-spin" />
+                <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin" />
               ) : (
-                <Trash2 className="w-6 h-6" />
+                <Trash2 className="w-5 h-5 sm:w-6 sm:h-6" />
               )}
             </Button>
           </TooltipTrigger>
@@ -221,6 +222,8 @@ export default function FilesList({
     setShowQuizQuestions,
     showQuizSettings,
     setShowQuizSettings,
+    showQuizPreview,
+    setShowQuizPreview,
     handleGenerateQuiz,
     userQuizzes,
     isLoadingQuizzes,
@@ -281,7 +284,7 @@ export default function FilesList({
 
   if (files.length === 0 && !isLoading) {
     return (
-      <Card className="max-w-4xl w-full">
+      <Card className="w-full">
         <CardContent className="py-12 text-center">
           <HardDrive className="w-12 h-12 text-neutral-600 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-neutral-300 mb-2">No files uploaded</h3>
@@ -293,7 +296,7 @@ export default function FilesList({
 
   return (
     <>
-      <Card className="max-w-4xl w-full relative">
+      <Card className="w-full relative">
       {/* Enhanced Quiz Generation Loader */}
       <QuizGenerationLoader
         isGenerating={isGenerating}
@@ -303,39 +306,39 @@ export default function FilesList({
         questionCount={quizProgress?.metadata?.questionCount}
       />
       
-      <CardHeader>
-        <div className="flex items-start justify-between">
+      <CardHeader className="pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div>
-            <CardTitle className="text-xl font-bold flex items-center gap-2">
-              <Database className="h-6 w-6 text-indigo-400" />
+            <CardTitle className="text-xl lg:text-2xl font-bold flex items-center gap-2">
+              <Database className="h-6 w-6 lg:h-7 lg:w-7 text-indigo-400" />
               Knowledge Base
               {isLoading && <Loader2 className="w-4 h-4 animate-spin text-neutral-400" />}
             </CardTitle>
-            <div className="text-sm text-neutral-400 mt-1">
+            <div className="text-sm lg:text-base text-neutral-400 mt-1">
               Manage your uploaded documents and context pool
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Button 
               size="lg" 
               onClick={() => setShowChat(true)}
               disabled={stats.active === 0}
-              className={`flex items-center gap-2 transition-all duration-200 ${
+              className={`flex items-center gap-2 transition-all duration-200 flex-1 sm:flex-none ${
                 stats.active === 0
                   ? 'bg-neutral-600 hover:bg-neutral-600 cursor-not-allowed'
                   : 'bg-green-600 hover:bg-green-700'
               }`}
             >
-              <MessageCircle className="h-5 w-5" />
-              Chat
+              <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="text-sm sm:text-base">Chat</span>
             </Button>
             
             <QuizDrawer
               trigger={
                 <Button 
                   size="lg" 
-                  className={`flex items-center gap-2 transition-all duration-200 ${
+                  className={`flex items-center gap-2 transition-all duration-200 flex-1 sm:flex-none ${
                     isGenerating 
                       ? 'bg-indigo-500 hover:bg-indigo-500 animate-pulse' 
                       : 'bg-indigo-600 hover:bg-indigo-700'
@@ -343,11 +346,11 @@ export default function FilesList({
                   disabled={isGenerating}
                 >
                   {isGenerating ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <Brain className="h-5 w-5" />
+                    <Brain className="h-4 w-4 sm:h-5 sm:w-5" />
                   )}
-                  {isGenerating ? 'Generating...' : 'Generate Quiz'}
+                  <span className="text-sm sm:text-base">{isGenerating ? 'Generating...' : 'Generate Quiz'}</span>
                 </Button>
               }
               existingQuizNames={[]}
@@ -360,7 +363,7 @@ export default function FilesList({
         </div>
 
         {/* Stats Row */}
-        <div className="flex flex-wrap gap-4 text-xs text-neutral-400 pt-2 border-t border-neutral-800">
+        <div className="flex flex-wrap gap-3 sm:gap-4 text-xs text-neutral-400 pt-3 border-t border-neutral-800">
           <div className="flex items-center gap-1">
             <FileText className="w-3 h-3" />
             {stats.total} files
@@ -376,9 +379,9 @@ export default function FilesList({
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 lg:space-y-6">
         {/* Sort Controls */}
-        <div className="flex items-center gap-1 text-xs">
+        <div className="flex items-center gap-1 text-xs overflow-x-auto">
           <span className="text-neutral-500 mr-2">Sort by:</span>
           <SortButton 
             field="fileName" 
@@ -429,6 +432,14 @@ export default function FilesList({
         onRetakeQuiz={retakeQuiz}
       />
     
+      {/* Quiz Preview Modal */}
+      <QuizPreviewModal 
+        open={showQuizPreview}
+        onOpenChange={setShowQuizPreview}
+        quizData={quizData}
+        onTakeQuiz={() => setShowQuizQuestions(true)}
+      />
+
       {/* Quiz Questions Drawer */}
       <QuizQuestions 
         open={showQuizQuestions}

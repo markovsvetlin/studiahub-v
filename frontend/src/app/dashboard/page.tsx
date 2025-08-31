@@ -1,6 +1,8 @@
 'use client'
+import { useState } from 'react'
 import UploadDropzone from '../components/UploadDropzone'
 import FilesList from '../components/FilesList'
+import MobileMetricsSidebar, { MetricsTriggerButton } from '../components/MobileMetricsSidebar'
 import UsageCard from '@/components/usage/UsageCard'
 import SubscriptionCard from '@/components/usage/SubscriptionCard'
 import Header from '@/components/Header'
@@ -14,18 +16,42 @@ import { useUser } from '@clerk/nextjs'
 export default function Dashboard() {
   return (
     <>
-      <Header />
-      <main className="min-h-screen p-8 space-y-10">
-        <section className="space-y-8">
-          <MainContent />
-        </section>
-      </main>
+      <DashboardContent />
       <Footer />
     </>
   )
 }
 
-function MainContent() {
+function DashboardContent() {
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+
+  return (
+    <>
+      <Header 
+        mobileMetricsButton={
+          <MetricsTriggerButton 
+            onClick={() => setIsMobileSidebarOpen(true)} 
+          />
+        }
+      />
+      <main className="min-h-screen lg:p-8 p-4 pt-6 space-y-10" id="main-content">
+        <section className="space-y-8">
+          <MainContent 
+            isMobileSidebarOpen={isMobileSidebarOpen} 
+            setIsMobileSidebarOpen={setIsMobileSidebarOpen} 
+          />
+        </section>
+      </main>
+    </>
+  )
+}
+
+interface MainContentProps {
+  isMobileSidebarOpen: boolean
+  setIsMobileSidebarOpen: (open: boolean) => void
+}
+
+function MainContent({ isMobileSidebarOpen, setIsMobileSidebarOpen }: MainContentProps) {
   const { user, isLoaded, isSignedIn } = useUser()
   
   // Debug: Let's see what's happening with auth state
@@ -90,10 +116,25 @@ function MainContent() {
 
   return (
     <UsageProvider refreshUsage={refreshUsage}>
+      {/* Mobile Sidebar */}
+      <MobileMetricsSidebar
+        usage={usage}
+        usageLoading={usageLoading}
+        usageError={usageError}
+        subscription={subscription}
+        subscriptionLoading={subscriptionLoading}
+        subscriptionError={subscriptionError}
+        onUpgrade={handleUpgrade}
+        onCancel={handleCancelSubscription}
+        onRenew={handleRenewSubscription}
+        isOpen={isMobileSidebarOpen}
+        onOpenChange={setIsMobileSidebarOpen}
+      />
+
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col lg:flex-row gap-8 items-start">
-          {/* Left side - Usage & Subscription Cards */}
-          <div className="lg:w-80 w-full flex-shrink-0 space-y-6">
+          {/* Desktop Left Sidebar - Hidden on Mobile */}
+          <div className="hidden lg:block lg:w-80 flex-shrink-0 space-y-6">
             <UsageCard usage={usage} isLoading={usageLoading} error={usageError} />
             <SubscriptionCard 
               subscription={subscription}
@@ -105,8 +146,8 @@ function MainContent() {
             />
           </div>
           
-          {/* Center - Main Content */}
-          <div className="flex-1 flex flex-col items-center space-y-8 max-w-4xl mx-auto">
+          {/* Main Content Area */}
+          <div className="flex-1 flex flex-col items-center space-y-6 lg:space-y-8 w-full lg:max-w-4xl mx-auto lg:mt-0 mt-4">
             {error ? (
               <div className="w-full p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-center">
                 Error loading files: {error}

@@ -38,6 +38,7 @@ export function useQuiz(userId: string | undefined) {
   const [quizData, setQuizData] = useState<QuizStatus | null>(null)
   const [showQuizQuestions, setShowQuizQuestions] = useState(false)
   const [showQuizSettings, setShowQuizSettings] = useState(false)
+  const [showQuizPreview, setShowQuizPreview] = useState(false)
   const [userQuizzes, setUserQuizzes] = useState<QuizListItem[]>([])
   const [isLoadingQuizzes, setIsLoadingQuizzes] = useState(false)
   const [quizProgress, setQuizProgress] = useState<QuizStatus | null>(null)
@@ -109,7 +110,7 @@ export function useQuiz(userId: string | undefined) {
     }
 
     setQuizData(quizStatus)
-    setShowQuizQuestions(true)
+    setShowQuizPreview(true) // Show preview modal for consistency
   }
 
   const handleGenerateQuiz = async (settings: QuizSettings) => {
@@ -135,7 +136,7 @@ export function useQuiz(userId: string | undefined) {
       
       setQuizData(response)
       setShowQuizSettings(false)
-      setShowQuizQuestions(true)
+      setShowQuizPreview(true) // Show preview modal instead of quiz drawer
       
       // Reset fetch flag and refresh quiz list
       hasFetched.current = false
@@ -180,6 +181,8 @@ export function useQuiz(userId: string | undefined) {
     setShowQuizQuestions,
     showQuizSettings,
     setShowQuizSettings,
+    showQuizPreview,
+    setShowQuizPreview,
     handleGenerateQuiz,
     userQuizzes,
     isLoadingQuizzes,

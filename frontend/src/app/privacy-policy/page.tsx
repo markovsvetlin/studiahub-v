@@ -1,5 +1,23 @@
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy - Your Data Protection',
+  description: 'Learn how StudiaHub protects your privacy and handles your data. We are committed to keeping your study materials and personal information secure.',
+  openGraph: {
+    title: 'Privacy Policy - Your Data Protection | StudiaHub',
+    description: 'Learn how StudiaHub protects your privacy and handles your data securely.',
+    url: 'https://studiahub.io/privacy-policy',
+  },
+  twitter: {
+    title: 'Privacy Policy - Your Data Protection | StudiaHub',
+    description: 'Learn how StudiaHub protects your privacy and handles your data securely.',
+  },
+  alternates: {
+    canonical: '/privacy-policy',
+  },
+}
 
 export default function PrivacyPolicy() {
   return (

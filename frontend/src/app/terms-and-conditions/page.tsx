@@ -1,5 +1,23 @@
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Terms and Conditions - Service Agreement',
+  description: 'Read our terms of service and user agreement for StudiaHub. Understand your rights and responsibilities when using our AI-powered learning platform.',
+  openGraph: {
+    title: 'Terms and Conditions - Service Agreement | StudiaHub',
+    description: 'Read our terms of service and user agreement for StudiaHub AI learning platform.',
+    url: 'https://studiahub.io/terms-and-conditions',
+  },
+  twitter: {
+    title: 'Terms and Conditions - Service Agreement | StudiaHub',
+    description: 'Read our terms of service and user agreement for StudiaHub AI learning platform.',
+  },
+  alternates: {
+    canonical: '/terms-and-conditions',
+  },
+}
 
 export default function TermsAndConditions() {
   return (

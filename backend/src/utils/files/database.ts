@@ -78,17 +78,40 @@ export async function updateFileError(key: string, errorMessage: string): Promis
  * Update file by ID
  */
 export async function updateFileById(fileId: string, data: Partial<FileRecord>): Promise<void> {
-  const updateExpression = ['SET progress = :progress', '#status = :status', 'totalChunks = :totalChunks', 'updatedAt = :updatedAt'];
-  const expressionAttributeValues: Record<string, any> = {
-    ':progress': data.progress ?? 0,
-    ':status': data.status ?? 'processing', 
-    ':totalChunks': data.totalChunks ?? 0,
-    ':updatedAt': new Date().toISOString()
-  };
+  const updateExpression: string[] = [];
+  const expressionAttributeValues: Record<string, any> = {};
+  const expressionAttributeNames: Record<string, any> = {};
+  
+  // Always update the updatedAt timestamp
+  updateExpression.push('updatedAt = :updatedAt');
+  expressionAttributeValues[':updatedAt'] = data.updatedAt || new Date().toISOString();
+  
+  // Handle other fields dynamically
+  if (data.progress !== undefined) {
+    updateExpression.push('progress = :progress');
+    expressionAttributeValues[':progress'] = data.progress;
+  }
+  
+  if (data.status !== undefined) {
+    updateExpression.push('#status = :status');
+    expressionAttributeNames['#status'] = 'status';
+    expressionAttributeValues[':status'] = data.status;
+  }
+  
+  if (data.totalChunks !== undefined) {
+    updateExpression.push('totalChunks = :totalChunks');
+    expressionAttributeValues[':totalChunks'] = data.totalChunks;
+  }
   
   if (data.wordCount !== undefined) {
     updateExpression.push('wordCount = :wordCount');
     expressionAttributeValues[':wordCount'] = data.wordCount;
+  }
+  
+  if (data.isEnabled !== undefined) {
+    updateExpression.push('isEnabled = :isEnabled');
+    expressionAttributeValues[':isEnabled'] = data.isEnabled;
+    console.log(`🔍 DEBUG: Updating file ${fileId} isEnabled to: ${data.isEnabled}`);
   }
   
   if (data.errorMessage !== undefined) {
@@ -103,8 +126,8 @@ export async function updateFileById(fileId: string, data: Partial<FileRecord>):
   await db.send(new UpdateCommand({
     TableName: FILES_TABLE,
     Key: { id: fileId },
-    UpdateExpression: updateExpression.join(', '),
-    ExpressionAttributeNames: { '#status': 'status' },
+    UpdateExpression: `SET ${updateExpression.join(', ')}`,
+    ...(Object.keys(expressionAttributeNames).length > 0 && { ExpressionAttributeNames: expressionAttributeNames }),
     ExpressionAttributeValues: expressionAttributeValues
   }));
 }
@@ -130,6 +153,8 @@ export async function findFileByKey(key: string): Promise<any> {
  * Now uses optimal GSI: direct query by userId + status, minimal filtering
  */
 export async function getEnabledFileIds(userId: string): Promise<string[]> {
+  console.log(`🔍 DEBUG: Getting enabled files for userId: ${userId}`);
+  
   const result = await db.send(new QueryCommand({
     TableName: FILES_TABLE,
     IndexName: 'user-status-index',
@@ -146,7 +171,17 @@ export async function getEnabledFileIds(userId: string): Promise<string[]> {
     }
   }));
   
-  return (result.Items || []).map(item => item.id);
+  const enabledFileIds = (result.Items || []).map(item => item.id);
+  console.log(`🔍 DEBUG: Found ${enabledFileIds.length} enabled files:`, enabledFileIds);
+  
+  // Also log the raw items to see the isEnabled values
+  if (result.Items) {
+    result.Items.forEach(item => {
+      console.log(`🔍 DEBUG: File ${item.id}: isEnabled=${item.isEnabled}, status=${item.status}`);
+    });
+  }
+  
+  return enabledFileIds;
 }
 
 /**

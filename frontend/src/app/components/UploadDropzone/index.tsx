@@ -160,15 +160,15 @@ export default function UploadDropzone({
   const openPicker = () => { if (inputRef.current) inputRef.current.value = ''; inputRef.current?.click() }
 
   return (
-    <Card className="space-y-4 max-w-4xl w-full">
-      <CardHeader>
-        <CardTitle className='text-xl font-bold flex items-center gap-2'>
-          <GraduationCap className="h-7 w-7 text-indigo-400" />
+    <Card className="space-y-4 w-full">
+      <CardHeader className="pb-4">
+        <CardTitle className='text-xl lg:text-2xl font-bold flex items-center gap-2'>
+          <GraduationCap className="h-6 w-6 lg:h-7 lg:w-7 text-indigo-400" />
           Upload Course Material
         </CardTitle>
-        <div className="text-sm text-neutral-400">Upload your lecture notes, documents, or images to start generating interactive quizzes and study material</div>
+        <div className="text-sm lg:text-base text-neutral-400">Upload your lecture notes, documents, or images to start generating interactive quizzes and study material</div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 lg:space-y-6">
         <DropArea
           isDragging={isDragging}
           setIsDragging={setIsDragging}
@@ -203,8 +203,13 @@ export default function UploadDropzone({
         )}
 
         <div className="flex justify-end">
-          <Button className='cursor-pointer' disabled={selectedFiles.length === 0 || isSubmitting} size="lg" onClick={handleSubmit}>
-            {isSubmitting && <Loader2 className="animate-spin" />}
+          <Button 
+            className='cursor-pointer w-full sm:w-auto' 
+            disabled={selectedFiles.length === 0 || isSubmitting} 
+            size="lg" 
+            onClick={handleSubmit}
+          >
+            {isSubmitting && <Loader2 className="animate-spin w-4 h-4 mr-2" />}
             {isSubmitting ? 'Uploading…' : 'Add to Knowledge Base'}
           </Button>
         </div>

@@ -248,6 +248,11 @@ export class ChatService {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) throw new Error('OpenAI API key not configured');
 
+    // Check if we have any chunks to work with
+    if (chunks.length === 0) {
+      throw new Error('No document context is available. Please enable at least one file in the context pool to ask questions about your documents.');
+    }
+
     const contextText = chunks
       .map(chunk => `[Source: ${chunk.metadata?.fileName || 'Unknown'}]\n${chunk.text}`)
       .join('\n\n---\n\n');
@@ -255,7 +260,7 @@ export class ChatService {
     const messages = [
       {
         role: 'system',
-        content: `You are an AI assistant helping users understand their documents. Answer based on the provided context.
+        content: `You are an AI assistant helping users understand their documents. Answer based on the provided context. If you cannot find relevant information in the context, clearly state that you don't have enough information in the provided documents to answer the question.
 
 CONTEXT:
 ${contextText}`
