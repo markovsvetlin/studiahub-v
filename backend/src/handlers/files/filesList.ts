@@ -5,14 +5,16 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
 import { createErrorResponse, createSuccessResponse } from '../../utils/http';
 import { FileService } from '../../services/files/FileService';
+import { validateJWT } from '../../middleware/jwtAuth';
 
 const fileService = new FileService();
 
 export async function list(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
   try {
-    const userId = event.queryStringParameters?.userId;
-    if (!userId) {
-      return createErrorResponse(400, 'userId query parameter required');
+    // Validate JWT token and get userId
+    const { userId, error } = await validateJWT(event);
+    if (!userId || error) {
+      return createErrorResponse(401, error || 'Unauthorized');
     }
 
     const files = await fileService.getUserFiles(userId);
@@ -26,6 +28,12 @@ export async function list(event: APIGatewayProxyEventV2): Promise<APIGatewayPro
 
 export async function deleteFile(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
   try {
+    // Validate JWT token and get userId
+    const { userId, error } = await validateJWT(event);
+    if (!userId || error) {
+      return createErrorResponse(401, error || 'Unauthorized');
+    }
+
     const fileId = event.pathParameters?.id;
     if (!fileId) {
       return createErrorResponse(400, 'File ID required');
@@ -41,6 +49,12 @@ export async function deleteFile(event: APIGatewayProxyEventV2): Promise<APIGate
 
 export async function toggleFile(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
   try {
+    // Validate JWT token and get userId
+    const { userId, error } = await validateJWT(event);
+    if (!userId || error) {
+      return createErrorResponse(401, error || 'Unauthorized');
+    }
+
     const fileId = event.pathParameters?.id;
     if (!fileId) {
       return createErrorResponse(400, 'File ID required');

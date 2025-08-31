@@ -1,14 +1,15 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
 import { createSuccessResponse, createErrorResponse } from '../../utils/http'
 import { getUserSubscription, updateSubscription } from '../../utils/subscriptions/database'
+import { validateJWT } from '../../middleware/jwtAuth'
 import stripe from '../../services/stripe/stripe'
 
 export const createCheckoutSession = async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
   try {
-    const { userId } = JSON.parse(event.body || '{}')
-    
-    if (!userId) {
-      return createErrorResponse(400, 'userId is required')
+    // Validate JWT token and get userId
+    const { userId, error } = await validateJWT(event)
+    if (!userId || error) {
+      return createErrorResponse(401, error || 'Unauthorized')
     }
 
     // Get or create user subscription record

@@ -1,5 +1,6 @@
 'use client'
 import { useState, useCallback, useRef, useMemo } from 'react'
+import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
 import { 
   sendMessage, 
@@ -67,6 +68,7 @@ const initialState: ChatState = {
 }
 
 export function useChatStore(userId?: string) {
+  const { getToken } = useAuth()
   const { refreshUsage } = useUsageContext()
 
   const [state, setState] = useState<ChatState>(initialState)
@@ -318,7 +320,10 @@ export function useChatStore(userId?: string) {
         ...(conversationId && { conversationId })
       }
 
-      const response = await sendMessage(request)
+      const response = await sendMessage({
+        ...request,
+        getToken
+      })
 
       // Handle successful response
       setState(prev => {

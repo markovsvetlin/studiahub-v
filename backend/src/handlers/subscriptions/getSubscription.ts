@@ -1,14 +1,14 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
 import { createSuccessResponse, createErrorResponse } from '../../utils/http'
 import { getUserSubscription } from '../../utils/subscriptions/database'
+import { validateJWT } from '../../middleware/jwtAuth'
 
 export const getSubscription = async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
   try {
-    // Get userId from path parameters or query
-    const userId = event.pathParameters?.userId || event.queryStringParameters?.userId
-    
-    if (!userId) {
-      return createErrorResponse(400, 'userId is required')
+    // Validate JWT token and get userId
+    const { userId, error } = await validateJWT(event)
+    if (!userId || error) {
+      return createErrorResponse(401, error || 'Unauthorized')
     }
 
     // Get user subscription

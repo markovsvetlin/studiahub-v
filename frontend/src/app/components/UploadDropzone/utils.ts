@@ -71,15 +71,33 @@ function determineContentType(file: File): string {
   return 'application/octet-stream'
 }
 
-async function requestPresignedUrl(baseUrl: string, file: File, userId: string): Promise<PresignedUrlResponse> {
+async function requestPresignedUrl(
+  baseUrl: string, 
+  file: File, 
+  getToken: () => Promise<string | null>
+): Promise<PresignedUrlResponse> {
+  const headers: Record<string, string> = { 
+    'content-type': 'application/json' 
+  }
+  
+  // Add Authorization header with Clerk JWT token
+  try {
+    const token = await getToken()
+    if (token) {
+      headers.Authorization = `Bearer ${token}`
+    }
+  } catch (error) {
+    console.error('Failed to get auth token:', error)
+  }
+
   const response = await fetch(`${baseUrl}/upload/presigned`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers,
     body: JSON.stringify({
       fileName: file.name,
       contentType: determineContentType(file),
-      fileSize: file.size,
-      userId
+      fileSize: file.size
+      // Remove userId from body - it will come from JWT token now
     })
   })
   
@@ -109,11 +127,30 @@ async function uploadToS3(uploadUrl: string, file: File, contentType: string): P
   }
 }
 
-async function confirmUploadComplete(baseUrl: string, backendKey: string, userId: string): Promise<void> {
+async function confirmUploadComplete(
+  baseUrl: string, 
+  backendKey: string, 
+  getToken: () => Promise<string | null>
+): Promise<void> {
+  const headers: Record<string, string> = { 
+    'content-type': 'application/json' 
+  }
+  
+  // Add Authorization header with Clerk JWT token
+  try {
+    const token = await getToken()
+    if (token) {
+      headers.Authorization = `Bearer ${token}`
+    }
+  } catch (error) {
+    console.error('Failed to get auth token:', error)
+  }
+
   const response = await fetch(`${baseUrl}/upload/confirm`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ key: backendKey, userId })
+    headers,
+    body: JSON.stringify({ key: backendKey })
+    // Remove userId from body - it will come from JWT token now
   })
   
   if (!response.ok) {
@@ -124,7 +161,7 @@ async function confirmUploadComplete(baseUrl: string, backendKey: string, userId
 
 export async function uploadToBackend(
   files: File[],
-  userId: string,
+  getToken: () => Promise<string | null>,
   updateProgress: (key: string, progress: number, status?: FileStatus) => void,
   onFileDone?: (localKey: string) => void
 ) {
@@ -137,7 +174,7 @@ export async function uploadToBackend(
       updateProgress(localFileKey, PROGRESS_UPLOAD_STARTED, 'processing')
       
       // Step 1: Request presigned URL
-      const presignedData = await requestPresignedUrl(baseUrl, file, userId)
+      const presignedData = await requestPresignedUrl(baseUrl, file, getToken)
       updateProgress(localFileKey, PROGRESS_PRESIGNED_OBTAINED, 'processing')
       
       // Step 2: Upload file directly to S3
@@ -146,7 +183,7 @@ export async function uploadToBackend(
       updateProgress(localFileKey, PROGRESS_S3_UPLOAD_COMPLETE, 'processing')
       
       // Step 3: Confirm upload and trigger processing
-      await confirmUploadComplete(baseUrl, presignedData.key, userId)
+      await confirmUploadComplete(baseUrl, presignedData.key, getToken)
       updateProgress(localFileKey, PROGRESS_PROCESSING_TRIGGERED, 'processing')
       
       // Start polling file status asynchronously

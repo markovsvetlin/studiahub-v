@@ -1,6 +1,7 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
 import { createErrorResponse, createSuccessResponse } from '../../utils/http'
 import { QuizService } from '../../services/quiz/QuizService'
+import { validateJWT } from '../../middleware/jwtAuth'
 
 const quizService = new QuizService()
 
@@ -9,6 +10,12 @@ const quizService = new QuizService()
  */
 export async function generateQuiz(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
   try {
+    // Validate JWT token and get userId
+    const { userId, error } = await validateJWT(event)
+    if (!userId || error) {
+      return createErrorResponse(401, error || 'Unauthorized')
+    }
+
     if (!event.body) {
       return createErrorResponse(400, 'Request body required')
     }
@@ -19,6 +26,9 @@ export async function generateQuiz(event: APIGatewayProxyEventV2): Promise<APIGa
     } catch {
       return createErrorResponse(400, 'Invalid JSON in request body');
     }
+    
+    // Add userId to request from JWT token
+    request.userId = userId;
     
     const result = await quizService.generateQuiz(request);
     return createSuccessResponse(result);

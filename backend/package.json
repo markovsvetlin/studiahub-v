@@ -18,6 +18,7 @@
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.137",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.3.0",
     "@types/pdf-parse": "^1.1.5",
     "cross-env": "^7.0.3",
@@ -42,6 +43,8 @@
     "@types/node-fetch": "^2.6.13",
     "@types/uuid": "^10.0.0",
     "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "jwks-rsa": "^3.2.0",
     "mammoth": "^1.7.2",
     "node-fetch": "^3.3.2",
     "pdf-parse": "^1.1.1",

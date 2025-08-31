@@ -109,15 +109,26 @@ export class ChatApiError extends Error {
 
 async function makeApiRequest<T>(
   url: string,
-  options: RequestInit = {}
+  options: RequestInit & { getToken?: () => Promise<string | null> } = {}
 ): Promise<T> {
   try {
+    const { getToken, ...fetchOptions } = options
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...fetchOptions.headers as Record<string, string>,
+    }
+
+    // Add Authorization header with Clerk JWT token
+    if (getToken) {
+      const token = await getToken()
+      if (token) {
+        headers.Authorization = `Bearer ${token}`
+      }
+    }
+
     const response = await fetch(`${API_BASE}${url}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
+      ...fetchOptions,
+      headers,
     })
 
     const data = await response.json()
@@ -142,10 +153,12 @@ async function makeApiRequest<T>(
   }
 }
 
-export async function sendMessage(data: SendMessageRequest): Promise<SendMessageResponse> {
+export async function sendMessage(data: SendMessageRequest & { getToken?: () => Promise<string | null> }): Promise<SendMessageResponse> {
+  const { getToken, ...messageData } = data
   return makeApiRequest<SendMessageResponse>('/chat/messages', {
     method: 'POST',
-    body: JSON.stringify(data),
+    body: JSON.stringify(messageData),
+    getToken
   })
 }
 

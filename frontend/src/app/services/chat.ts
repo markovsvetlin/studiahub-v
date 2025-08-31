@@ -49,13 +49,24 @@ export interface ConversationResponse {
   messages: ChatMessage[]
 }
 
-export async function sendChatMessage(data: SendMessageRequest): Promise<SendMessageResponse> {
-  const response = await fetch(`${API_BASE}/chat/send`, {
+export async function sendChatMessage(data: SendMessageRequest & { getToken?: () => Promise<string | null> }): Promise<SendMessageResponse> {
+  const { getToken, ...messageData } = data
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+
+  // Add Authorization header with Clerk JWT token
+  if (getToken) {
+    const token = await getToken()
+    if (token) {
+      headers.Authorization = `Bearer ${token}`
+    }
+  }
+
+  const response = await fetch(`${API_BASE}/chat/messages`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(data),
+    headers,
+    body: JSON.stringify(messageData),
   })
 
   if (!response.ok) {

@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '@clerk/nextjs'
 
 export interface UsageData {
   current: {
@@ -29,18 +30,30 @@ export interface UsageData {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3000/api'
 
 export function useUsage(userId?: string) {
+  const { getToken } = useAuth()
   const [usage, setUsage] = useState<UsageData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const fetchUsage = useCallback(async () => {
-    if (!userId) return
+    if (!getToken) return
 
     setIsLoading(true)
     setError(null)
 
     try {
-      const response = await fetch(`${API_BASE_URL}/usage/${userId}`)
+      // Get JWT token from Clerk
+      const token = await getToken()
+      if (!token) {
+        throw new Error('Not authenticated')
+      }
+
+      const response = await fetch(`${API_BASE_URL}/usage/current`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
@@ -54,7 +67,7 @@ export function useUsage(userId?: string) {
     } finally {
       setIsLoading(false)
     }
-  }, [userId])
+  }, [getToken])
 
   useEffect(() => {
     fetchUsage()

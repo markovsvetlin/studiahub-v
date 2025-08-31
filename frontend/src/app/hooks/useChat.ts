@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '@clerk/nextjs'
 import { 
   sendChatMessage, 
   getChatHistory, 
@@ -31,6 +32,7 @@ interface UseChatReturn {
 }
 
 export function useChat(userId?: string): UseChatReturn {
+  const { getToken } = useAuth()
   // Current conversation state
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null)
@@ -99,7 +101,10 @@ export function useChat(userId?: string): UseChatReturn {
         ...(conversationId && { conversationId })
       }
 
-      const response: SendMessageResponse = await sendChatMessage(request)
+      const response: SendMessageResponse = await sendChatMessage({
+        ...request,
+        getToken
+      })
 
       // Update the conversation ID if it's a new conversation
       if (!conversationId) {

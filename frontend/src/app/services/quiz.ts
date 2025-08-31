@@ -48,14 +48,24 @@ type QuizStatus = {
 
 const apiUrl = process.env.NEXT_PUBLIC_API_BASE
 
-const generateQuiz = async (quizData: QuizData) => {
+const generateQuiz = async (quizData: QuizData & { getToken: () => Promise<string | null> }) => {
   console.log('🚀 Starting quiz generation with data:', quizData)
+  
+  const { getToken, ...actualQuizData } = quizData
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json'
+  }
+
+  // Add Authorization header with Clerk JWT token
+  const token = await getToken()
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
+
   const response = await fetch(`${apiUrl}/quiz/generate`, {
     method: 'POST',
-    body: JSON.stringify(quizData),
-    headers: {
-      'Content-Type': 'application/json'
-    }
+    body: JSON.stringify(actualQuizData),
+    headers
   })
   
   const data = await response.json()
@@ -134,7 +144,7 @@ const waitForQuizCompletion = async (
 }
 
 const generateAndWaitForQuiz = async (
-  quizData: QuizData,
+  quizData: QuizData & { getToken: () => Promise<string | null> },
   onProgress?: (status: QuizStatus) => void
 ): Promise<QuizStatus> => {
 
@@ -171,12 +181,20 @@ interface UserQuizzesResponse {
   }>;
 }
 
-const getUserQuizzes = async (userId: string, limit: number = 100): Promise<UserQuizzesResponse> => {
-  const response = await fetch(`${apiUrl}/quiz/user?userId=${userId}&limit=${limit}`, {
+const getUserQuizzes = async (getToken: () => Promise<string | null>, limit: number = 100): Promise<UserQuizzesResponse> => {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json'
+  }
+
+  // Add Authorization header with Clerk JWT token
+  const token = await getToken()
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
+
+  const response = await fetch(`${apiUrl}/quiz/user?limit=${limit}`, {
     method: 'GET',
-    headers: {
-      'Content-Type': 'application/json'
-    }
+    headers
   })
   
   if (!response.ok) {

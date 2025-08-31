@@ -3,6 +3,7 @@ import { generateAndWaitForQuiz, getUserQuizzes, getQuizStatus, type QuizStatus 
 import { type QuizSettings } from '../components/QuizDrawer'
 import { toast } from 'sonner'
 import { useUsageContext } from '@/contexts/UsageContext'
+import { useAuth } from '@clerk/nextjs'
 
 interface QuizListItem {
   quizId: string
@@ -30,6 +31,7 @@ interface QuizListItem {
 }
 
 export function useQuiz(userId: string | undefined) {
+  const { getToken } = useAuth()
   const { refreshUsage } = useUsageContext()
 
   const [isGenerating, setIsGenerating] = useState(false)
@@ -47,7 +49,7 @@ export function useQuiz(userId: string | undefined) {
     hasFetched.current = true
     setIsLoadingQuizzes(true)
     try {
-      const response = await getUserQuizzes(userId)
+      const response = await getUserQuizzes(getToken)
       setUserQuizzes(response.quizzes)
     } catch (error) {
       toast.error('Failed to load quizzes', {
@@ -124,7 +126,8 @@ export function useQuiz(userId: string | undefined) {
         minutes: settings.minutes,
         difficulty: settings.difficulty,
         topic: settings.topic || undefined,
-        additionalInstructions: settings.additionalInstructions || undefined
+        additionalInstructions: settings.additionalInstructions || undefined,
+        getToken
       }, (progress) => {
         // Progress callback - update quiz progress state
         setQuizProgress(progress)
@@ -167,7 +170,7 @@ export function useQuiz(userId: string | undefined) {
     if (userId) {
       fetchUserQuizzes()
     }
-  }, [userId])
+  }, [userId, fetchUserQuizzes])
 
   return {
     isGenerating,

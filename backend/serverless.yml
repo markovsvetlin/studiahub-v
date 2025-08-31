@@ -163,30 +163,35 @@ functions:
       - httpApi:
           path: /upload/presigned
           method: POST
+
   confirmUpload:
     handler: src/handlers/files/presignedUrl.confirmUpload
     events:
       - httpApi:
           path: /upload/confirm
           method: POST
+
   filesList:
     handler: src/handlers/files/filesList.list
     events:
       - httpApi:
           path: /files
           method: GET
+
   filesDelete:
     handler: src/handlers/files/filesList.deleteFile
     events:
       - httpApi:
           path: /files/{id}
           method: DELETE
+
   filesToggle:
     handler: src/handlers/files/filesList.toggleFile
     events:
       - httpApi:
           path: /files/{id}/toggle
           method: PATCH
+
 
   generateQuiz:
     handler: src/handlers/quiz/generateQuiz.generateQuiz
@@ -196,6 +201,7 @@ functions:
       - httpApi:
           path: /quiz/generate
           method: POST
+
 
   quizStatus:
     handler: src/handlers/quiz/quizStatus.getQuizStatus
@@ -232,6 +238,7 @@ functions:
       - httpApi:
           path: /chat/messages
           method: POST
+
 
   chatGetMessages:
     handler: src/handlers/chat/getMessages.getMessages

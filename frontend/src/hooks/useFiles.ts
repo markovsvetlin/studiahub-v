@@ -1,22 +1,36 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '@clerk/nextjs'
 import { FileListItem } from '@/types/file'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://oyehv715ef.execute-api.us-east-1.amazonaws.com'
 
 export function useFiles(userId?: string, refreshUsage?: () => void) {
+  const { getToken } = useAuth()
   const [files, setFiles] = useState<FileListItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const fetchFiles = useCallback(async () => {
-    if (!userId) return
+    if (!getToken) return
     
     try {
       setIsLoading(true)
       setError(null)
       
-      const response = await fetch(`${API_BASE}/files?userId=${encodeURIComponent(userId)}`)
+      // Get JWT token from Clerk
+      const token = await getToken()
+      if (!token) {
+        throw new Error('Not authenticated')
+      }
+      
+      const response = await fetch(`${API_BASE}/files`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
       if (!response.ok) {
         throw new Error(`Failed to fetch files: ${response.status}`)
       }
@@ -34,7 +48,7 @@ export function useFiles(userId?: string, refreshUsage?: () => void) {
     } finally {
       setIsLoading(false)
     }
-  }, [userId])
+  }, [getToken])
 
   const toggleFileEnabled = useCallback(async (fileId: string, enabled: boolean) => {
     try {
@@ -43,9 +57,18 @@ export function useFiles(userId?: string, refreshUsage?: () => void) {
         file.id === fileId ? { ...file, isEnabled: enabled } : file
       ))
 
+      // Get JWT token from Clerk
+      const token = await getToken()
+      if (!token) {
+        throw new Error('Not authenticated')
+      }
+
       const response = await fetch(`${API_BASE}/files/${fileId}/toggle`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ isEnabled: enabled })
       })
       
@@ -67,12 +90,22 @@ export function useFiles(userId?: string, refreshUsage?: () => void) {
       ))
       setError(err instanceof Error ? err.message : 'Failed to toggle file')
     }
-  }, [])
+  }, [getToken])
 
   const deleteFile = useCallback(async (fileId: string) => {
     try {
+      // Get JWT token from Clerk
+      const token = await getToken()
+      if (!token) {
+        throw new Error('Not authenticated')
+      }
+
       const response = await fetch(`${API_BASE}/files/${fileId}`, { 
-        method: 'DELETE' 
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       })
       
       if (!response.ok) {
@@ -94,7 +127,7 @@ export function useFiles(userId?: string, refreshUsage?: () => void) {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete file')
     }
-  }, [refreshUsage])
+  }, [refreshUsage, getToken])
 
   useEffect(() => {
     fetchFiles()

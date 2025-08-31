@@ -10,8 +10,18 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000'
 /**
  * Get user subscription data
  */
-export async function getSubscription(userId: string): Promise<SubscriptionData> {
-  const response = await fetch(`${API_BASE_URL}/subscriptions/${userId}`)
+export async function getSubscription(getToken: () => Promise<string | null>): Promise<SubscriptionData> {
+  const headers: Record<string, string> = {}
+  
+  // Add Authorization header with Clerk JWT token
+  const token = await getToken()
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
+
+  const response = await fetch(`${API_BASE_URL}/subscriptions/user`, {
+    headers
+  })
   
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`)
@@ -23,13 +33,21 @@ export async function getSubscription(userId: string): Promise<SubscriptionData>
 /**
  * Create Stripe checkout session and redirect to checkout
  */
-export async function upgradeToProPlan(userId: string): Promise<void> {
+export async function upgradeToProPlan(getToken: () => Promise<string | null>): Promise<void> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+  
+  // Add Authorization header with Clerk JWT token
+  const token = await getToken()
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
+
   const response = await fetch(`${API_BASE_URL}/subscriptions/checkout`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ userId }),
+    headers,
+    body: JSON.stringify({}), // No userId needed - comes from JWT
   })
 
   if (!response.ok) {
