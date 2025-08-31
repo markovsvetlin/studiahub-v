@@ -26,7 +26,11 @@ export default function Dashboard() {
 }
 
 function MainContent() {
-  const { user, isLoaded } = useUser()
+  const { user, isLoaded, isSignedIn } = useUser()
+  
+  // Debug: Let's see what's happening with auth state
+  console.log('🔍 Auth State Check:', { isLoaded, isSignedIn, hasUser: !!user, userId: user?.id })
+
   const { usage, isLoading: usageLoading, error: usageError, refreshUsage } = useUsage(user?.id)
   const { files, isLoading, error, toggleFileEnabled, deleteFile, refreshFiles } = useFiles(user?.id, refreshUsage)
   const { 
@@ -46,7 +50,7 @@ function MainContent() {
   const handleCancelSubscription = async () => {
     try {
       await handleCancel()
-      console.log('Subscription cancelled successfully')
+
     } catch (error) {
       console.error('Failed to cancel subscription:', error)
     }
@@ -55,7 +59,7 @@ function MainContent() {
   const handleRenewSubscription = async () => {
     try {
       await handleRenew()
-      console.log('Subscription renewed successfully')
+
     } catch (error) {
       console.error('Failed to renew subscription:', error)
     }
@@ -74,10 +78,12 @@ function MainContent() {
   }
 
   // Show sign-in message only after we've confirmed user is not authenticated
-  if (!user) {
+  if (isLoaded && (!user || !isSignedIn)) {
+    // Force redirect to home page
+    window.location.href = '/'
     return (
       <div className="max-w-4xl mx-auto p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-center">
-        Please sign in to upload and manage files
+        <p className="mb-4">Redirecting to sign in...</p>
       </div>
     )
   }
@@ -107,7 +113,7 @@ function MainContent() {
               </div>
             ) : (
               <>
-                <UploadDropzone userId={user.id} onUploadComplete={handleUploadComplete} />
+                <UploadDropzone onUploadComplete={handleUploadComplete} />
                 <FilesList
                   files={files}
                   onToggleEnabled={toggleFileEnabled}

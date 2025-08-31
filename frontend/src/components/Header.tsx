@@ -1,25 +1,37 @@
 'use client'
-import { UserButton, useUser, useClerk } from '@clerk/nextjs'
+import { useUser, useClerk, useSignIn } from '@clerk/nextjs'
 import Image from 'next/image'
 import Link from 'next/link'
 import { 
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { 
-  User,
-  Settings,
   LogOut,
   ChevronDown
 } from 'lucide-react'
 
 export default function Header() {
-  const { user } = useUser()
+  const { isSignedIn, user } = useUser()
   const { signOut } = useClerk()
+  const { signIn } = useSignIn()
+
+  const handleGoogleSignIn = async () => {
+    if (!signIn) return
+    
+    try {
+      await signIn.authenticateWithRedirect({
+        strategy: 'oauth_google',
+        redirectUrl: '/dashboard',
+        redirectUrlComplete: '/dashboard',
+      })
+    } catch (error) {
+      console.error('Error signing in with Google:', error)
+    }
+  }
 
   return (
     <header className="border-b border-slate-600/50 bg-slate-800/50 backdrop-blur-sm sticky top-0 z-50">
@@ -105,15 +117,11 @@ export default function Header() {
               </div>
             ) : (
               <div className="flex items-center space-x-2">
-                <Button variant="ghost" asChild>
-                  <Link href="/sign-in" className="text-neutral-300 hover:text-white">
-                    Sign in
-                  </Link>
-                </Button>
-                <Button asChild className="bg-indigo-600 hover:bg-indigo-700">
-                  <Link href="/sign-up" className="text-white">
-                    Sign up
-                  </Link>
+                <Button 
+                  onClick={handleGoogleSignIn}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                >
+                  Sign in with Google
                 </Button>
               </div>
             )}

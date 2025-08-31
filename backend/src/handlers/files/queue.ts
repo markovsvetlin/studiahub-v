@@ -21,7 +21,7 @@ export const process: SQSHandler = async (event) => {
         error.message.includes('FILE_TOO_SMALL') ||
         error.message.includes('Usage limit exceeded')
       )) {
-        console.log('Skipping retry for validation error:', error.message);
+
         return; // Don't throw - message will be deleted from queue
       }
       

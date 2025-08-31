@@ -47,7 +47,7 @@ export class TextExtractionService {
     const totalChars = pages.reduce((sum, p) => sum + p.text.length, 0);
     const wordCount = countWordsInPages(pages);
     
-    console.log(`📄 Extracted text: ${totalChars} characters, ${wordCount} words`);
+
     
     return pages;
   }
@@ -57,11 +57,11 @@ export class TextExtractionService {
     const result = await pdfParse(buffer) as { text: string };
     
     const extractedChars = result.text.length;
-    console.log(`📄 PDF extracted via pdf-parse: ${extractedChars} characters`);
+
     
     // If minimal text, try OCR
     if (extractedChars < 200) {
-      console.log('🔍 PDF appears scanned, trying OCR...');
+
       return await this.extractFromImageOrOcr(key);
     }
     

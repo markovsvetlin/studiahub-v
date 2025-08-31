@@ -165,7 +165,7 @@ export function useChat(userId?: string): UseChatReturn {
     } finally {
       setIsLoading(false)
     }
-  }, [userId, currentConversation, loadChatHistory])
+  }, [userId, currentConversation, loadChatHistory, getToken])
 
   // Start new conversation
   const startNewConversation = useCallback(() => {

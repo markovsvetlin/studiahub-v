@@ -223,8 +223,9 @@ export function useChatStore(userId?: string) {
     }))
 
     try {
+      const currentPaginationState = state.messagesPagination[conversationId]
       const response = await getMessages(conversationId, userId, {
-        cursor: loadMore ? paginationState?.nextCursor || undefined : undefined,
+        cursor: loadMore ? currentPaginationState?.nextCursor || undefined : undefined,
         limit: 50,
         direction: loadMore ? 'backward' : 'forward'
       })

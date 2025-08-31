@@ -15,8 +15,10 @@ import {
 
 export default function Home() {
   const { signIn } = useSignIn()
-  const { isSignedIn, user } = useUser()
+  const { isSignedIn, user, isLoaded } = useUser()
   const router = useRouter()
+
+
 
   const handleGoogleSignIn = async () => {
     if (!signIn) return
@@ -75,14 +77,14 @@ export default function Home() {
                 </p>
                 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start items-center pt-4">
-                  <Button 
+                  {/* <Button 
                     size="lg" 
                     className="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-6 text-lg font-semibold rounded-xl shadow-xl shadow-indigo-600/25"
                   >
                     <Play className="w-5 h-5 mr-2" />
                     Try Demo
                   </Button>
-                  
+                   */}
 
                 </div>
               </div>

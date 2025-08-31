@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
-import { generateAndWaitForQuiz, getUserQuizzes, getQuizStatus, type QuizStatus } from '../services/quiz'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { generateAndWaitForQuiz, getUserQuizzes, type QuizStatus } from '../services/quiz'
 import { type QuizSettings } from '../components/QuizDrawer'
 import { toast } from 'sonner'
 import { useUsageContext } from '@/contexts/UsageContext'
@@ -43,7 +43,7 @@ export function useQuiz(userId: string | undefined) {
   const [quizProgress, setQuizProgress] = useState<QuizStatus | null>(null)
   const hasFetched = useRef(false)
 
-  const fetchUserQuizzes = async () => {
+  const fetchUserQuizzes = useCallback(async () => {
     if (!userId || hasFetched.current) return
     
     hasFetched.current = true
@@ -59,7 +59,7 @@ export function useQuiz(userId: string | undefined) {
     } finally {
       setIsLoadingQuizzes(false)
     }
-  }
+  }, [userId, getToken])
 
   const deleteQuiz = async (quizId: string) => {
     try {

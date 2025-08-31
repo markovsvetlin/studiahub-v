@@ -12,6 +12,7 @@ export interface Message {
   }
   sourceFiles?: string[]
   createdAt: string
+  conversationId?: string // Added when storing messages in local state
 }
 
 export interface Conversation {
@@ -46,10 +47,7 @@ export interface SendMessageResponse {
   sourceFiles: string[]
   timestamp: number
   isNewConversation: boolean
-  rateLimitInfo: {
-    remainingRequests: number
-    resetTime: number
-  }
+  rateLimitInfo: RateLimitInfo
 }
 
 export interface GetMessagesResponse {
@@ -66,10 +64,7 @@ export interface GetMessagesResponse {
     messageCount: number
     totalTokens: number
   }
-  rateLimitInfo: {
-    remainingRequests: number
-    resetTime: number
-  }
+  rateLimitInfo: RateLimitInfo
 }
 
 export interface GetConversationsResponse {
@@ -83,16 +78,18 @@ export interface GetConversationsResponse {
     totalConversations: number
     totalTokensUsed: number
   }
-  rateLimitInfo: {
-    remainingRequests: number
-    resetTime: number
-  }
+  rateLimitInfo: RateLimitInfo
+}
+
+export interface RateLimitInfo {
+  remainingRequests: number
+  resetTime: number
 }
 
 export interface ApiError {
   code: string
   message: string
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 }
 
 // Custom error class for API errors
@@ -100,7 +97,7 @@ export class ChatApiError extends Error {
   constructor(
     public code: string,
     message: string,
-    public details?: Record<string, any>
+    public details?: Record<string, unknown>
   ) {
     super(message)
     this.name = 'ChatApiError'

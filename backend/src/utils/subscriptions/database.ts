@@ -70,14 +70,14 @@ export async function updateSubscription(
         // Skip empty string values for Stripe IDs (they should be undefined instead)
         if ((key === 'stripeCustomerId' || key === 'stripeSubscriptionId') && 
             typeof value === 'string' && value.trim() === '') {
-          console.log(`📝 Skipping empty string for ${key}`)
+
           return
         }
         
         updateExpression.push(`#${key} = :${key}`)
         expressionAttributeNames[`#${key}`] = key
         expressionAttributeValues[`:${key}`] = value
-        console.log(`📝 Adding to update: ${key} = ${value}`)
+
       }
     })
 
@@ -88,7 +88,7 @@ export async function updateSubscription(
 
     if (updateExpression.length === 1) {
       // Only updatedAt would be updated, skip the operation
-      console.log('📝 No meaningful updates to apply, skipping')
+
       return
     }
 
@@ -101,7 +101,7 @@ export async function updateSubscription(
       ReturnValues: 'ALL_NEW'
     }))
     
-    console.log('📝 Update result:', JSON.stringify(result.Attributes))
+
   } catch (error) {
     console.error('Error updating subscription:', error)
     throw new Error('Failed to update subscription')

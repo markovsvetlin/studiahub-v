@@ -27,7 +27,7 @@ export class EmbeddingService {
 
     // Calculate batch processing parameters
     const { batchSize, concurrency } = this.calculateBatchParams(chunks.length);
-    console.log(`📊 Processing ${chunks.length} chunks with batchSize=${batchSize}, concurrency=${concurrency}`);
+
 
     // Create batches
     const batches = this.createBatches(chunks, batchSize);
@@ -49,7 +49,7 @@ export class EmbeddingService {
       await updateFileProgress(file.key, Math.round(progress));
     }
 
-    console.log(`✅ Processed ${chunks.length} chunks for file ${file.id}`);
+
   }
 
   /**
@@ -59,7 +59,7 @@ export class EmbeddingService {
     try {
       await pineconeService.initialize();
       await pineconeService.deleteFileChunks(fileId, userId);
-      console.log(`✅ Deleted embeddings for file: ${fileId}`);
+
     } catch (error) {
       console.warn(`⚠️  Failed to delete embeddings: ${error}`);
       throw error;
@@ -179,8 +179,7 @@ export class EmbeddingService {
     if (!apiKey) throw new Error('OPENAI_API_KEY required');
     if (!texts.length) throw new Error('No texts provided');
     
-    // Debug: Log text lengths to identify large chunks
-    console.log(`Embedding ${texts.length} texts with lengths:`, texts.map(t => t.length));
+
     
     // Safety: Truncate any text that's too long (6000 chars = ~1500 tokens, safe margin)
     const safTexts = texts.map(text => text.length > 6000 ? text.substring(0, 6000) + '...' : text);

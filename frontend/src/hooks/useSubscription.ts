@@ -1,8 +1,10 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '@clerk/nextjs'
 import { getSubscription, upgradeToProPlan, cancelSubscription, renewSubscription, SubscriptionData } from '@/services/subscription'
 
 export function useSubscription(userId?: string) {
+  const { getToken } = useAuth()
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -14,7 +16,7 @@ export function useSubscription(userId?: string) {
     setError(null)
 
     try {
-      const data = await getSubscription(userId)
+      const data = await getSubscription(getToken)
       setSubscription(data)
     } catch (err) {
       console.error('Error fetching subscription:', err)
@@ -22,7 +24,7 @@ export function useSubscription(userId?: string) {
     } finally {
       setIsLoading(false)
     }
-  }, [userId])
+  }, [userId, getToken])
 
   useEffect(() => {
     fetchSubscription()
@@ -33,13 +35,13 @@ export function useSubscription(userId?: string) {
 
     try {
       setError(null)
-      await upgradeToProPlan(userId)
+      await upgradeToProPlan(getToken)
       // User will be redirected to Stripe, no need to update state here
     } catch (err) {
       console.error('Error upgrading subscription:', err)
       setError(err instanceof Error ? err.message : 'Failed to upgrade subscription')
     }
-  }, [userId])
+  }, [userId, getToken])
 
   const handleCancel = useCallback(async () => {
     if (!userId) return

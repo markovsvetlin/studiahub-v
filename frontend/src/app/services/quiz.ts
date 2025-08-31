@@ -49,7 +49,7 @@ type QuizStatus = {
 const apiUrl = process.env.NEXT_PUBLIC_API_BASE
 
 const generateQuiz = async (quizData: QuizData & { getToken: () => Promise<string | null> }) => {
-  console.log('🚀 Starting quiz generation with data:', quizData)
+
   
   const { getToken, ...actualQuizData } = quizData
   const headers: Record<string, string> = {
@@ -77,7 +77,7 @@ const generateQuiz = async (quizData: QuizData & { getToken: () => Promise<strin
     throw new Error(errorMessage)
   }
   
-  console.log('🚀 Quiz generation started:', data)
+
   return data
 }
 
@@ -105,16 +105,16 @@ const waitForQuizCompletion = async (
   const startTime = Date.now()
   const pollInterval = 3000 // Check every 3 seconds
   
-  console.log(`⏳ Waiting for quiz ${quizId} to complete...`)
+
   
   while (Date.now() - startTime < maxWaitTime) {
     try {
       const status = await getQuizStatus(quizId)
-      const progressInfo = status.workers 
-        ? `${status.progress}% (${status.workers.completed}/${status.workers.total} workers completed)`
-        : `${status.progress}%`
+      // const progressInfo = status.workers 
+      //   ? `${status.progress}% (${status.workers.completed}/${status.workers.total} workers completed)`
+      //   : `${status.progress}%`
       
-      console.log(`📊 Quiz progress: ${progressInfo} (${status.status})`)
+
       
       // Call progress callback if provided
       if (onProgress) {
@@ -122,8 +122,7 @@ const waitForQuizCompletion = async (
       }
       
       if (status.status === 'ready') {
-        console.log('✅ Quiz completed successfully!')
-        console.log(`📝 Generated ${status.questions?.length || 0} questions`)
+        console.log(`✅ Quiz completed successfully! Generated ${status.questions?.length || 0} questions`)
         return status
       }
       

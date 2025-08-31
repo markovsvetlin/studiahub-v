@@ -36,7 +36,7 @@ export class S3Service {
         Bucket: S3_BUCKET,
         Key: key
       }));
-      console.log(`✅ Deleted from S3: ${key}`);
+
     } catch (error) {
       console.warn(`⚠️  Failed to delete from S3: ${error}`);
       throw error;

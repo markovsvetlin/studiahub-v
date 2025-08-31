@@ -81,7 +81,7 @@ export function useFiles(userId?: string, refreshUsage?: () => void) {
         throw new Error(data.error || 'Failed to toggle file')
       }
 
-      console.log(`File ${fileId} ${enabled ? 'enabled' : 'disabled'} in context pool`)
+
       
     } catch (err) {
       // Revert optimistic update on error

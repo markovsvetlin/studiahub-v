@@ -247,7 +247,7 @@ export class QuizService {
   }
 
   private async processQuizLocal(chunks: ChunkContent[], metadata: QuizMetadata, userId: string): Promise<QuizGenerationResult> {
-    console.log('🚀 Using LOCAL flow - direct generation');
+
     
     // Create quiz record
     const quiz = await createQuizRecord({ userId, metadata });
@@ -270,7 +270,7 @@ export class QuizService {
   }
 
   private async processQuizProduction(chunks: ChunkContent[], metadata: QuizMetadata, userId: string): Promise<QuizGenerationResult> {
-    console.log('⚙️ Using PRODUCTION flow - worker-based');
+
 
     // Create quiz record
     const quiz = await createQuizRecord({ userId, metadata });
@@ -373,7 +373,7 @@ export class QuizService {
     // Complete quiz
     await completeQuiz(quizId, shuffledQuestions);
     
-    console.log(`✅ Quiz ${quizId} finalized with ${shuffledQuestions.length} questions`);
+    console.log(`✅ Quiz ${quizId} completed with ${shuffledQuestions.length} questions`);
   }
 
   private async retrieveChunksForQuiz(options: {
@@ -438,7 +438,7 @@ export class QuizService {
 
     const prompt = this.createQuizPrompt(chunks, metadata);
     
-    console.log(`🤖 Generating ${metadata.questionCount} ${metadata.difficulty} questions`);
+
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',

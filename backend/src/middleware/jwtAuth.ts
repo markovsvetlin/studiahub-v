@@ -43,7 +43,7 @@ export async function validateJWT(event: APIGatewayProxyEventV2): Promise<{ user
         return { userId: null, error: 'No userId in token' }
       }
 
-      console.log(`✅ Successfully validated user (dev mode): ${userId}`)
+
       return { userId }
 
     } catch (jwtError: any) {

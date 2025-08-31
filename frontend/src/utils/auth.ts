@@ -2,7 +2,7 @@
  * Auth utility functions for making authenticated API requests
  */
 
-import { useAuth } from '@clerk/nextjs'
+
 
 /**
  * Get authenticated headers with Clerk JWT token

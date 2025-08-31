@@ -64,7 +64,7 @@ export async function createQuizRecord(request: CreateQuizRequest): Promise<Quiz
     Item: record
   }));
   
-  console.log(`✅ Created quiz record: ${record.id}`);
+
   return record;
 }
 
@@ -100,7 +100,7 @@ export async function addQuestionsToQuiz(quizId: string, newQuestions: QuizQuest
     }
   }));
 
-  console.log(`📝 Added ${newQuestions.length} questions to quiz ${quizId}`);
+
 }
 
 /**
@@ -124,7 +124,7 @@ export async function completeQuiz(quizId: string, questions: QuizQuestion[]): P
     }
   }));
 
-  console.log(`🎉 Quiz ${quizId} completed with ${questions.length} questions`);
+
 }
 
 /**

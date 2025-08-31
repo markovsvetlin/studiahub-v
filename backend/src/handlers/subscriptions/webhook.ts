@@ -24,7 +24,7 @@ export const stripeWebhook = async (event: APIGatewayProxyEventV2): Promise<APIG
       return createErrorResponse(400, 'Invalid signature')
     }
 
-    console.log('Processing Stripe webhook event:', stripeEvent.type)
+
 
     // Handle the event
     switch (stripeEvent.type) {
@@ -53,7 +53,7 @@ export const stripeWebhook = async (event: APIGatewayProxyEventV2): Promise<APIG
         break
 
       default:
-        console.log(`Unhandled event type: ${stripeEvent.type}`)
+
     }
 
     return createSuccessResponse({ received: true })
@@ -65,7 +65,7 @@ export const stripeWebhook = async (event: APIGatewayProxyEventV2): Promise<APIG
 }
 
 async function handleCheckoutCompleted(session: any) {
-  console.log('Checkout completed:', session.id)
+
   
   const userId = session.metadata?.userId
   if (!userId) {
@@ -78,7 +78,7 @@ async function handleCheckoutCompleted(session: any) {
 }
 
 async function handleSubscriptionCreated(subscription: any) {
-  console.log('Subscription created:', subscription.id)
+
   
   const userId = subscription.metadata?.userId
   const customerId = subscription.customer
@@ -120,7 +120,7 @@ async function handleSubscriptionUpdated(subscription: any) {
   const customerId = subscription.customer
   
   if (!userId) {
-    console.log('No userId in metadata, searching by customer ID:', customerId)
+
     // Try to find user by customer ID
     const existingSubscription = await getSubscriptionByCustomerId(customerId)
     if (!existingSubscription) {
@@ -128,10 +128,10 @@ async function handleSubscriptionUpdated(subscription: any) {
       return
     }
     
-    console.log('Found existing subscription for user:', existingSubscription.userId)
+
     
     // If subscription is active, upgrade to pro
-    const updateData = {
+    const updateData: any = {
       status: subscription.status,
       currentPeriodStart: new Date(subscription.current_period_start * 1000).toISOString(),
       currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
@@ -143,29 +143,24 @@ async function handleSubscriptionUpdated(subscription: any) {
       updateData.stripeSubscriptionId = subscription.id
       updateData.plan = 'pro'
       updateData.priceId = subscription.items.data[0]?.price?.id
-      console.log('Upgrading user to Pro plan')
     }
     
-    console.log('Updating subscription with data:', JSON.stringify(updateData))
     await updateSubscription(existingSubscription.userId, updateData)
-    console.log('Subscription update completed for user:', existingSubscription.userId)
   } else {
-    console.log('Found userId in metadata:', userId)
-    const updateData = {
+
+    const updateData: any = {
       status: subscription.status,
       currentPeriodStart: new Date(subscription.current_period_start * 1000).toISOString(),
       currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
       cancelAtPeriodEnd: subscription.cancel_at_period_end
     }
     
-    console.log('Updating subscription with data:', JSON.stringify(updateData))
     await updateSubscription(userId, updateData)
-    console.log('Subscription update completed for user:', userId)
   }
 }
 
 async function handleSubscriptionDeleted(subscription: any) {
-  console.log('Subscription deleted:', subscription.id)
+
   
   const userId = subscription.metadata?.userId
   const customerId = subscription.customer
@@ -201,13 +196,13 @@ async function handleSubscriptionDeleted(subscription: any) {
 }
 
 async function handlePaymentSucceeded(invoice: any) {
-  console.log('Payment succeeded for invoice:', invoice.id)
+
   // Payment successful - subscription should already be active
   // Could add additional logging or notifications here
 }
 
 async function handlePaymentFailed(invoice: any) {
-  console.log('Payment failed for invoice:', invoice.id)
+
   
   const subscriptionId = invoice.subscription
   if (subscriptionId) {

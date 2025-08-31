@@ -99,7 +99,7 @@ const toggleFileEnabled = useCallback(async (fileId: string, enabled: boolean) =
       throw new Error(data.error || 'Failed to toggle file')
     }
 
-    console.log(`File ${fileId} ${enabled ? 'enabled' : 'disabled'} in context pool`)
+
     
   } catch (err) {
     // Rollback optimistic update on error

@@ -53,12 +53,12 @@ class PineconeService {
   async initialize(): Promise<void> {
     // Prevent concurrent initializations
     if (this.initialized) {
-      console.log('✅ Pinecone already initialized')
+
       return
     }
 
     if (this.initPromise) {
-      console.log('⏳ Waiting for existing initialization...')
+
       return this.initPromise
     }
 
@@ -68,7 +68,7 @@ class PineconeService {
 
   private async _initialize(): Promise<void> {
     try {
-      console.log('🔧 Initializing Pinecone connection...')
+
       
       // Check if index exists and has correct dimensions
       const indexList = await this.client.listIndexes()
@@ -77,18 +77,18 @@ class PineconeService {
       if (existingIndex) {
         // Check if dimensions match
         if (existingIndex.dimension !== EMBEDDING_DIMENSION) {
-          console.log(`🔄 Index ${INDEX_NAME} has wrong dimensions (${existingIndex.dimension}), recreating with ${EMBEDDING_DIMENSION}...`)
+
           await this.client.deleteIndex(INDEX_NAME)
-          console.log('⏳ Waiting for index deletion...')
+
           await new Promise(resolve => setTimeout(resolve, 10000)) // Wait 10s for deletion
         } else {
-          console.log(`✅ Index ${INDEX_NAME} already exists with correct dimensions (${EMBEDDING_DIMENSION}D)`)
+
         }
       }
 
       // Create index if it doesn't exist or was deleted due to wrong dimensions
       if (!existingIndex || existingIndex.dimension !== EMBEDDING_DIMENSION) {
-        console.log(`📦 Creating Pinecone index with ${EMBEDDING_DIMENSION} dimensions...`)
+
         try {
           await this.client.createIndex({
             name: INDEX_NAME,
@@ -103,12 +103,12 @@ class PineconeService {
           })
           
           // Wait for index to be ready
-          console.log('⏳ Waiting for index to be ready...')
+
           await this.waitForIndexReady()
         } catch (error: any) {
           // Handle case where index already exists (race condition)
           if (error.message?.includes('ALREADY_EXISTS')) {
-            console.log('📦 Index already exists, continuing...')
+
           } else {
             throw error
           }
@@ -118,7 +118,7 @@ class PineconeService {
       this.index = this.client.index(INDEX_NAME)
       this.initialized = true
       this.initPromise = null
-      console.log('✅ Pinecone initialized successfully')
+      console.log('✅ Pinecone initialized')
     } catch (error) {
       console.error('❌ Pinecone initialization failed:', error)
       this.initPromise = null // Reset promise on failure
@@ -137,7 +137,7 @@ class PineconeService {
           return
         }
       } catch (error) {
-        console.log(`⏳ Index not ready yet, attempt ${attempts + 1}/${maxAttempts}`)
+
       }
       
       await new Promise(resolve => setTimeout(resolve, 10000)) // Wait 10 seconds
@@ -158,8 +158,7 @@ class PineconeService {
 
     try {
       const namespace = this.getUserNamespace(userId)
-      console.log(`💾 Upserting ${chunks.length} chunks to Pinecone (namespace: ${namespace})`)
-      console.log(`🔍 Chunk format: ${chunks.length} chunks, each with ${chunks[0]?.values?.length || 0} dimensions`)
+
 
       // Validate chunk format before upsert
       for (let i = 0; i < chunks.length; i++) {
@@ -172,7 +171,7 @@ class PineconeService {
         }
       }
 
-      console.log('✅ Chunk validation passed, upserting to Pinecone...')
+
       
       // Add timeout to prevent hanging
       const upsertPromise = this.index.namespace(namespace).upsert(chunks)
@@ -181,8 +180,7 @@ class PineconeService {
       )
       
       const result = await Promise.race([upsertPromise, timeoutPromise])
-      console.log(`🚀 Pinecone upsert completed`)
-      console.log(`✅ Successfully upserted ${chunks.length} chunks to namespace: ${namespace}`)
+
     } catch (error) {
       console.error('❌ Failed to upsert chunks:', error)
       throw error
@@ -206,10 +204,7 @@ class PineconeService {
         filter
       } = options
 
-      console.log(`🔍 Searching ${topK} chunks in namespace: ${namespace}`)
-      if (filter) {
-        console.log(`🔧 Using filter: ${JSON.stringify(filter)}`)
-      }
+
 
       const queryRequest = {
         vector: queryVector,
@@ -226,7 +221,7 @@ class PineconeService {
         metadata: match.metadata || {}
       }))
 
-      console.log(`✅ Found ${results.length} matching chunks`)
+
       return results
     } catch (error) {
       console.error('❌ Failed to search chunks:', error)
@@ -248,7 +243,7 @@ class PineconeService {
 
     try {
       const namespace = this.getUserNamespace(userId)
-      console.log(`🎲 Getting ${count} random chunks from ${enabledFileIds.length} enabled files`)
+
 
       // Create a random query vector to get diverse results
       const randomVector = Array(EMBEDDING_DIMENSION).fill(0).map(() => (Math.random() - 0.5) * 0.1)
@@ -269,7 +264,7 @@ class PineconeService {
       const shuffled = searchResults.sort(() => Math.random() - 0.5)
       const selected = shuffled.slice(0, count)
 
-      console.log(`✅ Selected ${selected.length} random chunks from ${searchResults.length} candidates`)
+
       return selected
     } catch (error) {
       console.error('❌ Failed to get random chunks:', error)
@@ -287,7 +282,7 @@ class PineconeService {
 
     try {
       const namespace = this.getUserNamespace(userId)
-      console.log(`🗑️ Deleting all chunks for file ${fileId} from namespace: ${namespace}`)
+
 
       // Delete by ID pattern since we know the chunk IDs follow: chunk_{fileId}_{index}
       // This is more reliable than filter-based deletion
@@ -310,7 +305,7 @@ class PineconeService {
         }
       }
 
-      console.log(`✅ Successfully deleted chunks for file ${fileId}`)
+
     } catch (error) {
       console.error('❌ Failed to delete file chunks:', error)
       throw error

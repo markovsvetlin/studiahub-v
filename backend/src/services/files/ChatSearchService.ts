@@ -41,8 +41,7 @@ export class ChatSearchService {
         return [];
       }
 
-      console.log(`🔍 Searching for relevant chunks for query: "${query.substring(0, 50)}..."`);
-      console.log(`📚 Searching across ${enabledFileIds.length} enabled files`);
+
 
       // Generate embedding for the query
       const [queryEmbedding] = await this.embeddingService.generateEmbeddings([query]);
@@ -65,7 +64,7 @@ export class ChatSearchService {
         }
       }));
 
-      console.log(`✅ Found ${relevantChunks.length} relevant chunks with scores: ${relevantChunks.map(c => c.score.toFixed(3)).join(', ')}`);
+
 
       return relevantChunks;
 

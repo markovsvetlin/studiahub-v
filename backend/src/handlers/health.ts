@@ -11,7 +11,7 @@ import { createSuccessResponse } from '../utils/http';
  * @returns Health status response
  */
 export async function handler(_event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
-  console.log('Health check requested');
+;
   
   const healthData = {
     status: 'healthy',
