@@ -1,13 +1,7 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
+import { clerkMiddleware } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 
-// Define protected routes
-const isProtectedRoute = createRouteMatcher([
-  '/dashboard(.*)',
-  // Add more protected routes here as needed
-])
-
-export default clerkMiddleware(async (auth, req) => {
+export default clerkMiddleware(async () => {
   // Skip protection in development and let client-side handle auth
   return NextResponse.next()
 }, {

@@ -2,10 +2,9 @@ import { WebSite, Organization, SoftwareApplication, WithContext } from 'schema-
 
 interface StructuredDataProps {
   type: 'website' | 'organization' | 'software'
-  data?: any
 }
 
-export default function StructuredData({ type, data }: StructuredDataProps) {
+export default function StructuredData({ type }: StructuredDataProps) {
   const getStructuredData = (): WithContext<WebSite | Organization | SoftwareApplication> => {
     const baseUrl = 'https://studiahub.io'
     

@@ -34,6 +34,7 @@ type QuizStatus = {
     minutes: number
     difficulty: 'easy' | 'medium' | 'hard'
     topic?: string
+    additionalInstructions?: string
   }
   questions?: Question[]
   workers?: {
@@ -175,6 +176,7 @@ interface UserQuizzesResponse {
       minutes: number;
       difficulty: 'easy' | 'medium' | 'hard';
       topic?: string;
+      additionalInstructions?: string;
     };
     questions?: Question[];
   }>;

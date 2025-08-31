@@ -2,19 +2,16 @@
 import { 
   Dialog,
   DialogContent, 
-  DialogHeader,
   DialogTitle,
   DialogDescription
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
 import { 
   Brain, 
   Clock, 
   Target, 
   BookOpen, 
-  Trophy,
   Play
 } from 'lucide-react'
 import { type QuizStatus } from '../services/quiz'
@@ -101,7 +98,7 @@ export default function QuizPreviewModal({
           {/* Additional Instructions - Centered */}
           {metadata.additionalInstructions && (
             <div className="w-full bg-neutral-900/50 border border-neutral-800 rounded-lg p-3">
-              <p className="text-xs text-neutral-300 italic text-center">"{metadata.additionalInstructions}"</p>
+              <p className="text-xs text-neutral-300 italic text-center">&quot;{metadata.additionalInstructions}&quot;</p>
             </div>
           )}
 
