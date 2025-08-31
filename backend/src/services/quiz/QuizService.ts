@@ -289,6 +289,8 @@ export class QuizService {
     const distribution = this.calculateWorkerDistribution(chunks.length, metadata.questionCount);
     const workerTasks = this.createWorkerTasks(chunks, metadata, distribution, quizId);
     
+    console.log(`🔀 Distributing ${chunks.length} chunks across ${workerTasks.length} workers for ${metadata.questionCount} questions`);
+    
     if (!QUIZ_QUEUE_URL) {
       throw new Error('QUIZ_QUEUE_URL not configured');
     }
@@ -310,10 +312,21 @@ export class QuizService {
     let workerCount: number;
     
     switch (questionCount) {
-      case 10: workerCount = 2; break;
-      case 20: workerCount = 4; break;
-      case 30: workerCount = 6; break;
-      default: workerCount = Math.min(Math.ceil(questionCount / 5), 6);
+      case 10: workerCount = 5; break;
+      case 20: workerCount = 10; break;
+      case 30: workerCount = 10; break;
+      default: workerCount = Math.min(Math.ceil(questionCount / 3), 10); // ~3 questions per worker, max 10 workers
+    }
+    
+    // Don't create more workers than we have chunks - this is the key protection
+    const originalWorkerCount = workerCount;
+    workerCount = Math.min(workerCount, chunkCount);
+    
+    // Also ensure we don't create more workers than questions
+    workerCount = Math.min(workerCount, questionCount);
+    
+    if (originalWorkerCount !== workerCount) {
+      console.log(`⚡ Optimized worker count: ${originalWorkerCount} → ${workerCount} (limited by ${chunkCount} chunks or ${questionCount} questions)`);
     }
     
     return {
@@ -330,6 +343,11 @@ export class QuizService {
       const startIndex = i * distribution.chunksPerWorker;
       const endIndex = Math.min(startIndex + distribution.chunksPerWorker, chunks.length);
       const workerChunks = chunks.slice(startIndex, endIndex);
+      
+      // Skip workers that would have no chunks (shouldn't happen with improved distribution)
+      if (workerChunks.length === 0) {
+        continue;
+      }
       
       let questionsForThisWorker = distribution.questionsPerWorker;
       if (i === distribution.workerCount - 1) {
@@ -369,8 +387,7 @@ export class QuizService {
 
     // Shuffle questions for variety
     const shuffledQuestions = [...quiz.questions].sort(() => Math.random() - 0.5);
-    
-    // Complete quiz
+ 
     await completeQuiz(quizId, shuffledQuestions);
     
     console.log(`✅ Quiz ${quizId} completed with ${shuffledQuestions.length} questions`);
@@ -388,6 +405,7 @@ export class QuizService {
     
     // Get enabled files
     const enabledFileIds = await getEnabledFileIds(userId);
+    
     if (enabledFileIds.length === 0) {
       throw new Error('Cannot generate quiz because no files are currently enabled. Please enable at least one file from your uploaded documents.');
     }
@@ -435,6 +453,8 @@ export class QuizService {
     if (!chunks || chunks.length === 0) {
       throw new Error('Cannot generate quiz because no files are currently enabled. Please enable at least one file from your uploaded documents to create a quiz.');
     }
+    
+    console.log(`📝 Generating ${metadata.questionCount} ${metadata.difficulty} questions from ${chunks.length} content chunks`);
     
     // Additional validation to ensure chunks have actual text content
     const validChunks = chunks.filter(chunk => chunk.text && chunk.text.trim().length > 0);

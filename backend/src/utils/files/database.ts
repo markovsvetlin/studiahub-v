@@ -172,14 +172,7 @@ export async function getEnabledFileIds(userId: string): Promise<string[]> {
   }));
   
   const enabledFileIds = (result.Items || []).map(item => item.id);
-  console.log(`🔍 DEBUG: Found ${enabledFileIds.length} enabled files:`, enabledFileIds);
-  
-  // Also log the raw items to see the isEnabled values
-  if (result.Items) {
-    result.Items.forEach(item => {
-      console.log(`🔍 DEBUG: File ${item.id}: isEnabled=${item.isEnabled}, status=${item.status}`);
-    });
-  }
+  console.log(`📁 Found ${enabledFileIds.length} enabled files for quiz generation`);
   
   return enabledFileIds;
 }

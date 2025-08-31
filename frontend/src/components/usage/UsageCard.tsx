@@ -132,7 +132,6 @@ export default function UsageCard({ usage, isLoading, error }: UsageCardProps) {
     )
   }
 
-  // No usage data available
   if (!usage) {
     return (
       <Card className="border-slate-600/50 bg-slate-700/30">
