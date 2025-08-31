@@ -225,7 +225,7 @@ functions:
           method: DELETE
 
   chatSendMessage:
-    handler: src/handlers/chat/sendMessage.sendMessage
+    handler: src/handlers/chat/chatSend.sendMessage
     timeout: 45
     memorySize: 1024
     events:
