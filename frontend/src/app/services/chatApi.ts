@@ -1,3 +1,5 @@
+import { getAuthHeaders } from '@/utils/auth'
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000'
 
 export interface Message {
@@ -106,25 +108,17 @@ export class ChatApiError extends Error {
 
 async function makeApiRequest<T>(
   url: string,
-  options: RequestInit & { getToken?: () => Promise<string | null> } = {}
+  options: RequestInit = {}
 ): Promise<T> {
   try {
-    const { getToken, ...fetchOptions } = options
+    const authHeaders = await getAuthHeaders()
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...fetchOptions.headers as Record<string, string>,
-    }
-
-    // Add Authorization header with Clerk JWT token
-    if (getToken) {
-      const token = await getToken()
-      if (token) {
-        headers.Authorization = `Bearer ${token}`
-      }
+      ...authHeaders,
+      ...options.headers as Record<string, string>,
     }
 
     const response = await fetch(`${API_BASE}${url}`, {
-      ...fetchOptions,
+      ...options,
       headers,
     })
 
@@ -150,12 +144,10 @@ async function makeApiRequest<T>(
   }
 }
 
-export async function sendMessage(data: SendMessageRequest & { getToken?: () => Promise<string | null> }): Promise<SendMessageResponse> {
-  const { getToken, ...messageData } = data
+export async function sendMessage(data: SendMessageRequest): Promise<SendMessageResponse> {
   return makeApiRequest<SendMessageResponse>('/chat/messages', {
     method: 'POST',
-    body: JSON.stringify(messageData),
-    getToken
+    body: JSON.stringify(data),
   })
 }
 

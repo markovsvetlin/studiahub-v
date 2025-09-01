@@ -1,5 +1,5 @@
 'use client'
-import { useUser, useClerk } from '@clerk/nextjs'
+import { useSession, signIn, signOut } from 'next-auth/react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { 
@@ -19,14 +19,12 @@ interface HeaderProps {
 }
 
 export default function Header({ mobileMetricsButton }: HeaderProps) {
-  const { user } = useUser()
-  const { signOut, redirectToSignIn } = useClerk()
+  const { data: session } = useSession()
+  const user = session?.user
 
-  const handleGoogleAuth = () => {
-    // DIRECT CLERK REDIRECT - handles both new and existing users
-    redirectToSignIn({
-      redirectUrl: '/dashboard'
-    })
+  const handleGoogleAuth = async () => {
+    // Perfect solution - one button handles everything
+    signIn('google', { callbackUrl: '/dashboard' })
   }
 
   return (
@@ -63,7 +61,7 @@ export default function Header({ mobileMetricsButton }: HeaderProps) {
                     Welcome back,
                   </span>
                   <span className="text-sm font-medium text-white">
-                    {user.firstName || user.emailAddresses[0]?.emailAddress}
+                    {user.name?.split(' ')[0] || user.email}
                   </span>
                 </div>
 
@@ -75,7 +73,7 @@ export default function Header({ mobileMetricsButton }: HeaderProps) {
                       className="flex items-center space-x-2 hover:bg-slate-700/50 border-slate-600/50"
                     >
                       <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white text-sm font-medium">
-                        {user.firstName?.[0] || user.emailAddresses[0]?.emailAddress[0]?.toUpperCase()}
+                        {user.name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase()}
                       </div>
                       <ChevronDown className="w-4 h-4 text-neutral-400" />
                     </Button>
@@ -87,10 +85,10 @@ export default function Header({ mobileMetricsButton }: HeaderProps) {
                   >
                     <div className="px-3 py-2 border-b border-slate-600">
                       <p className="text-sm font-medium text-white">
-                        {user.firstName} {user.lastName}
+                        {user.name}
                       </p>
                       <p className="text-xs text-neutral-400 truncate">
-                        {user.emailAddresses[0]?.emailAddress}
+                        {user.email}
                       </p>
                     </div>
                     
@@ -99,7 +97,7 @@ export default function Header({ mobileMetricsButton }: HeaderProps) {
                     
                     <DropdownMenuItem 
                       className="text-red-400 hover:bg-red-500/10 hover:text-red-300 cursor-pointer"
-                      onClick={() => signOut({ redirectUrl: '/' })}
+                      onClick={() => signOut({ callbackUrl: '/' })}
                     >
                       <LogOut className="w-4 h-4 mr-2" />
                       Sign out

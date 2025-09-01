@@ -1,47 +1,46 @@
-/**
- * Auth utility functions for making authenticated API requests
- */
+import { getSession } from 'next-auth/react'
 
-
-
-/**
- * Get authenticated headers with Clerk JWT token
- */
 export async function getAuthHeaders(): Promise<Record<string, string>> {
-  // This needs to be called from within a component that has access to Clerk context
-  // We'll handle this in the API service functions instead
+  const session = await getSession()
+  
+  if (session?.accessToken) {
+    return {
+      'Authorization': `Bearer ${session.accessToken}`,
+      'Content-Type': 'application/json',
+    }
+  }
+  
+  // For NextAuth, we can also pass the session user ID
+  if (session?.user?.id) {
+    return {
+      'X-User-ID': session.user.id,
+      'X-User-Email': session.user.email || '',
+      'Content-Type': 'application/json',
+    }
+  }
+  
   return {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
   }
 }
 
-/**
- * Make an authenticated API request with Clerk JWT token
- */
+// Backwards compatibility - return session instead of token
+export async function getToken() {
+  const session = await getSession()
+  return session?.accessToken || null
+}
+
 export async function makeAuthenticatedRequest(
   url: string, 
   options: RequestInit = {},
-  getToken?: () => Promise<string | null>
 ): Promise<Response> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...options.headers as Record<string, string>
-  }
-
-  // Add Authorization header if getToken function is provided
-  if (getToken) {
-    try {
-      const token = await getToken()
-      if (token) {
-        headers.Authorization = `Bearer ${token}`
-      }
-    } catch (error) {
-      console.error('Failed to get auth token:', error)
-    }
-  }
-
+  const headers = await getAuthHeaders()
+  
   return fetch(url, {
     ...options,
-    headers
+    headers: {
+      ...headers,
+      ...options.headers,
+    },
   })
 }

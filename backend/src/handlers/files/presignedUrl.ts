@@ -6,7 +6,7 @@ import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
 import { createErrorResponse, createSuccessResponse } from '../../utils/http';
 import { FileService } from '../../services/files/FileService';
 import { triggerFileProcessing } from '../../utils/files/queue';
-import { validateJWT } from '../../middleware/jwtAuth';
+import { validateJWT } from '../../middleware/nextAuthMiddleware';
 
 const fileService = new FileService();
 

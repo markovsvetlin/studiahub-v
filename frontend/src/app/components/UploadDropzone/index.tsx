@@ -3,7 +3,7 @@ import { useCallback, useMemo, useRef, useState, useEffect } from 'react'
 import { GraduationCap, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { useAuth } from '@clerk/nextjs'
+import { useSession } from 'next-auth/react'
 import { DropArea } from './DropArea'
 import { FileList } from './FileList'
 import { formatBytes, makeFileKey, uploadToBackend } from './utils'
@@ -29,7 +29,7 @@ export default function UploadDropzone({
   maxTotalBytes = 20 * 1024 * 1024, // 10MB per file limit
   caption = 'Multiple files · Max 10MB per file · PDF, DOCX, Images (including HEIC)'
 }: UploadDropzoneProps) {
-  const { getToken } = useAuth()
+  const { data: session } = useSession()
   const [isDragging, setIsDragging] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
@@ -114,7 +114,7 @@ export default function UploadDropzone({
       selectedFiles.forEach(f => { initial[makeKey(f)] = { progress: 0, status: 'idle' } })
       setFileProgressByKey(initial)
 
-      await uploadToBackend(selectedFiles, getToken, (k: string, p: number, s?: 'processing' | 'done' | 'error') => setProgress(k, p, s))
+      await uploadToBackend(selectedFiles, (k: string, p: number, s?: 'processing' | 'done' | 'error') => setProgress(k, p, s))
     } finally {
       // keep submitting state until all visible rows are done
       cleanupInterval = setInterval(() => {
@@ -147,7 +147,7 @@ export default function UploadDropzone({
         clearInterval(cleanupInterval)
       }
     }
-  }, [makeKey, selectedFiles, setProgress, getToken])
+  }, [makeKey, selectedFiles, setProgress])
 
   // Call onUploadComplete outside of render phase to avoid React state update warnings
   useEffect(() => {

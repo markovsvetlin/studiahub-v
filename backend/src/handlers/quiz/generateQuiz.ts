@@ -1,7 +1,7 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
 import { createErrorResponse, createSuccessResponse } from '../../utils/http'
 import { QuizService } from '../../services/quiz/QuizService'
-import { validateJWT } from '../../middleware/jwtAuth'
+import { validateJWT } from '../../middleware/nextAuthMiddleware'
 
 const quizService = new QuizService()
 

@@ -10,14 +10,10 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000'
 /**
  * Get user subscription data
  */
-export async function getSubscription(getToken: () => Promise<string | null>): Promise<SubscriptionData> {
-  const headers: Record<string, string> = {}
-  
-  // Add Authorization header with Clerk JWT token
-  const token = await getToken()
-  if (token) {
-    headers.Authorization = `Bearer ${token}`
-  }
+import { getAuthHeaders } from '@/utils/auth'
+
+export async function getSubscription(): Promise<SubscriptionData> {
+  const headers = await getAuthHeaders()
 
   const response = await fetch(`${API_BASE_URL}/subscriptions/user`, {
     headers
@@ -33,16 +29,8 @@ export async function getSubscription(getToken: () => Promise<string | null>): P
 /**
  * Create Stripe checkout session and redirect to checkout
  */
-export async function upgradeToProPlan(getToken: () => Promise<string | null>): Promise<void> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  }
-  
-  // Add Authorization header with Clerk JWT token
-  const token = await getToken()
-  if (token) {
-    headers.Authorization = `Bearer ${token}`
-  }
+export async function upgradeToProPlan(): Promise<void> {
+  const headers = await getAuthHeaders()
 
   const response = await fetch(`${API_BASE_URL}/subscriptions/checkout`, {
     method: 'POST',

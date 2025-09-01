@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { useAuth } from '@clerk/nextjs'
+import { useSession } from 'next-auth/react'
 import { 
   sendChatMessage, 
   getChatHistory, 
@@ -32,7 +32,7 @@ interface UseChatReturn {
 }
 
 export function useChat(userId?: string): UseChatReturn {
-  const { getToken } = useAuth()
+  const { data: session } = useSession()
   // Current conversation state
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null)
@@ -101,10 +101,7 @@ export function useChat(userId?: string): UseChatReturn {
         ...(conversationId && { conversationId })
       }
 
-      const response: SendMessageResponse = await sendChatMessage({
-        ...request,
-        getToken
-      })
+      const response: SendMessageResponse = await sendChatMessage(request)
 
       // Update the conversation ID if it's a new conversation
       if (!conversationId) {
@@ -165,7 +162,7 @@ export function useChat(userId?: string): UseChatReturn {
     } finally {
       setIsLoading(false)
     }
-  }, [userId, currentConversation, loadChatHistory, getToken])
+  }, [userId, currentConversation, loadChatHistory, session])
 
   // Start new conversation
   const startNewConversation = useCallback(() => {

@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { useAuth } from '@clerk/nextjs'
+import { useSession } from 'next-auth/react'
+import {  getAuthHeaders } from '../utils/auth'
 
 export interface UsageData {
   current: {
@@ -30,29 +31,22 @@ export interface UsageData {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE || 'https://oyehv715ef.execute-api.us-east-1.amazonaws.com'
 
 export function useUsage(userId?: string) {
-  const { getToken } = useAuth()
+  const { data: session } = useSession()
   const [usage, setUsage] = useState<UsageData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const fetchUsage = useCallback(async () => {
-    if (!getToken) return
+    if (!session) return
 
     setIsLoading(true)
     setError(null)
 
     try {
-      // Get JWT token from Clerk
-      const token = await getToken()
-      if (!token) {
-        throw new Error('Not authenticated')
-      }
-
+      const headers = await getAuthHeaders()
+      
       const response = await fetch(`${API_BASE_URL}/usage/current`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+        headers
       })
       
       if (!response.ok) {
@@ -67,7 +61,7 @@ export function useUsage(userId?: string) {
     } finally {
       setIsLoading(false)
     }
-  }, [getToken])
+  }, [session])
 
   useEffect(() => {
     fetchUsage()

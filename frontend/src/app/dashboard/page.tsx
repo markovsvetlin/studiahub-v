@@ -11,7 +11,7 @@ import { UsageProvider } from '@/contexts/UsageContext'
 import { useFiles } from '@/hooks/useFiles'
 import { useUsage } from '@/hooks/useUsage'
 import { useSubscription } from '@/hooks/useSubscription'
-import { useUser } from '@clerk/nextjs'
+import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 
 export default function Dashboard() {
@@ -53,8 +53,10 @@ interface MainContentProps {
 }
 
 function MainContent({ isMobileSidebarOpen, setIsMobileSidebarOpen }: MainContentProps) {
-  const { user, isLoaded, isSignedIn } = useUser()
-  const router = useRouter()
+  const { data: session, status } = useSession()
+  const user = session?.user
+  const isLoaded = status !== 'loading'
+  const isSignedIn = status === 'authenticated'
   
   // Debug: Let's see what's happening with auth state
   console.log('🔍 Auth State Check:', { isLoaded, isSignedIn, hasUser: !!user, userId: user?.id })

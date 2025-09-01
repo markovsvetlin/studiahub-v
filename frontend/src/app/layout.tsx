@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { ClerkProvider } from '@clerk/nextjs';
 import { Toaster } from "@/components/ui/sonner";
 import StructuredData from "./components/StructuredData";
 import Script from 'next/script';
+import AuthProvider from "../components/AuthProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -99,10 +99,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider
-      publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
-    >
-      <html lang="en" className="dark">
+    <html lang="en" className="dark">
         <head>
           {/* DNS Prefetch and Preconnect for performance */}
           <link rel="dns-prefetch" href="//fonts.googleapis.com" />
@@ -160,17 +157,18 @@ export default function RootLayout({
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
-          {/* Skip link for accessibility and SEO */}
-          <a 
-            href="#main-content" 
-            className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[9999] focus:bg-indigo-600 focus:text-white focus:px-4 focus:py-2 focus:rounded-md focus:no-underline"
-          >
-            Skip to main content
-          </a>
-          {children}
-          <Toaster position="top-right" />
+          <AuthProvider>
+            {/* Skip link for accessibility and SEO */}
+            <a 
+              href="#main-content" 
+              className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[9999] focus:bg-indigo-600 focus:text-white focus:px-4 focus:py-2 focus:rounded-md focus:no-underline"
+            >
+              Skip to main content
+            </a>
+            {children}
+            <Toaster position="top-right" />
+          </AuthProvider>
         </body>
       </html>
-    </ClerkProvider>
   );
 }

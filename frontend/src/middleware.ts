@@ -1,13 +1,19 @@
-import { clerkMiddleware } from '@clerk/nextjs/server'
-import { NextResponse } from 'next/server'
+import { withAuth } from 'next-auth/middleware'
 
-export default clerkMiddleware(async () => {
-  // Skip protection in development and let client-side handle auth
-  return NextResponse.next()
-}, {
-  // Add explicit configuration for production
-  publishableKey: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-})
+export default withAuth(
+  // Optional: Add additional middleware logic here
+  function middleware(req) {
+    // You can add custom logic here if needed
+  },
+  {
+    callbacks: {
+      authorized: ({ token }) => {
+        // Allow access for now - you can add authorization logic later
+        return true
+      },
+    },
+  }
+)
 
 export const config = {
   matcher: [

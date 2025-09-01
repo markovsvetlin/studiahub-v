@@ -1,7 +1,7 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
 import { createSuccessResponse, createErrorResponse } from '../../utils/http'
 import { getUserSubscription, updateSubscription } from '../../utils/subscriptions/database'
-import { validateJWT } from '../../middleware/jwtAuth'
+import { validateJWT } from '../../middleware/nextAuthMiddleware'
 import stripe from '../../services/stripe/stripe'
 
 export const cancelSubscription = async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {

@@ -1,3 +1,5 @@
+import { getAuthHeaders } from '@/utils/auth'
+
 // Progress tracking constants
 const PROGRESS_UPLOAD_STARTED = 5
 const PROGRESS_PRESIGNED_OBTAINED = 10
@@ -73,22 +75,9 @@ function determineContentType(file: File): string {
 
 async function requestPresignedUrl(
   baseUrl: string, 
-  file: File, 
-  getToken: () => Promise<string | null>
+  file: File
 ): Promise<PresignedUrlResponse> {
-  const headers: Record<string, string> = { 
-    'content-type': 'application/json' 
-  }
-  
-  // Add Authorization header with Clerk JWT token
-  try {
-    const token = await getToken()
-    if (token) {
-      headers.Authorization = `Bearer ${token}`
-    }
-  } catch (error) {
-    console.error('Failed to get auth token:', error)
-  }
+  const headers = await getAuthHeaders()
 
   const response = await fetch(`${baseUrl}/upload/presigned`, {
     method: 'POST',
@@ -129,22 +118,9 @@ async function uploadToS3(uploadUrl: string, file: File, contentType: string): P
 
 async function confirmUploadComplete(
   baseUrl: string, 
-  backendKey: string, 
-  getToken: () => Promise<string | null>
+  backendKey: string
 ): Promise<void> {
-  const headers: Record<string, string> = { 
-    'content-type': 'application/json' 
-  }
-  
-  // Add Authorization header with Clerk JWT token
-  try {
-    const token = await getToken()
-    if (token) {
-      headers.Authorization = `Bearer ${token}`
-    }
-  } catch (error) {
-    console.error('Failed to get auth token:', error)
-  }
+  const headers = await getAuthHeaders()
 
   const response = await fetch(`${baseUrl}/upload/confirm`, {
     method: 'POST',
@@ -161,7 +137,6 @@ async function confirmUploadComplete(
 
 export async function uploadToBackend(
   files: File[],
-  getToken: () => Promise<string | null>,
   updateProgress: (key: string, progress: number, status?: FileStatus) => void,
   onFileDone?: (localKey: string) => void
 ) {
@@ -174,7 +149,7 @@ export async function uploadToBackend(
       updateProgress(localFileKey, PROGRESS_UPLOAD_STARTED, 'processing')
       
       // Step 1: Request presigned URL
-      const presignedData = await requestPresignedUrl(baseUrl, file, getToken)
+      const presignedData = await requestPresignedUrl(baseUrl, file)
       updateProgress(localFileKey, PROGRESS_PRESIGNED_OBTAINED, 'processing')
       
       // Step 2: Upload file directly to S3
@@ -183,7 +158,7 @@ export async function uploadToBackend(
       updateProgress(localFileKey, PROGRESS_S3_UPLOAD_COMPLETE, 'processing')
       
       // Step 3: Confirm upload and trigger processing
-      await confirmUploadComplete(baseUrl, presignedData.key, getToken)
+      await confirmUploadComplete(baseUrl, presignedData.key)
       updateProgress(localFileKey, PROGRESS_PROCESSING_TRIGGERED, 'processing')
       
       // Start polling file status asynchronously

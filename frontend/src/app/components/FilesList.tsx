@@ -19,7 +19,7 @@ import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { FileListItem, FileListProps, SortField, SortDirection } from '@/types/file'
-import { useUser } from "@clerk/nextjs";
+import { useSession } from 'next-auth/react';
 import QuizDrawer from './QuizDrawer'
 import QuizQuestions from './QuizQuestions'
 import QuizPreviewModal from './QuizPreviewModal'
@@ -206,7 +206,8 @@ export default function FilesList({
   sortDirection = 'desc',
   onSort
 }: FileListProps) {
-  const { user } = useUser();
+  const { data: session } = useSession();
+  const user = session?.user;
   const [internalSortField, setInternalSortField] = useState<SortField>(sortField)
   const [internalSortDirection, setInternalSortDirection] = useState<SortDirection>(sortDirection)
   

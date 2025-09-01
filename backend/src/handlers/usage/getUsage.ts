@@ -1,7 +1,7 @@
 import { APIGatewayProxyHandlerV2 } from 'aws-lambda'
 import { createSuccessResponse, createErrorResponse } from '../../utils/http'
 import { getUserUsage, getUsageLimits } from '../../utils/usage/database'
-import { validateJWT } from '../../middleware/jwtAuth'
+import { validateJWT } from '../../middleware/nextAuthMiddleware'
 
 export const getUserUsageHandler: APIGatewayProxyHandlerV2 = async (event) => {
   try {

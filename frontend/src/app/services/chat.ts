@@ -1,3 +1,5 @@
+import { getAuthHeaders } from '@/utils/auth'
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE
 export interface ChatMessage {
   id: string
@@ -49,24 +51,13 @@ export interface ConversationResponse {
   messages: ChatMessage[]
 }
 
-export async function sendChatMessage(data: SendMessageRequest & { getToken?: () => Promise<string | null> }): Promise<SendMessageResponse> {
-  const { getToken, ...messageData } = data
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  }
-
-  // Add Authorization header with Clerk JWT token
-  if (getToken) {
-    const token = await getToken()
-    if (token) {
-      headers.Authorization = `Bearer ${token}`
-    }
-  }
+export async function sendChatMessage(data: SendMessageRequest): Promise<SendMessageResponse> {
+  const headers = await getAuthHeaders()
 
   const response = await fetch(`${API_BASE}/chat/messages`, {
     method: 'POST',
     headers,
-    body: JSON.stringify(messageData),
+    body: JSON.stringify(data),
   })
 
   if (!response.ok) {
