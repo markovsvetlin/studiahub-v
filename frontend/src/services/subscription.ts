@@ -52,11 +52,11 @@ export async function upgradeToProPlan(): Promise<void> {
  * Cancel user subscription
  */
 export async function cancelSubscription(userId: string): Promise<{ message: string; periodEnd?: string }> {
+  const headers = await getAuthHeaders()
+  
   const response = await fetch(`${API_BASE_URL}/subscriptions/cancel`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify({ userId }),
   })
 
@@ -71,11 +71,11 @@ export async function cancelSubscription(userId: string): Promise<{ message: str
  * Renew cancelled subscription (remove cancellation)
  */
 export async function renewSubscription(userId: string): Promise<{ message: string; periodEnd?: string }> {
+  const headers = await getAuthHeaders()
+  
   const response = await fetch(`${API_BASE_URL}/subscriptions/renew`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify({ userId }),
   })
 
