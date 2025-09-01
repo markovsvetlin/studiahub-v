@@ -48,7 +48,7 @@ export default function Home() {
       } else {
         throw new Error('Neither signUp nor signIn available')
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ OAuth authentication failed:', error)
       alert('Authentication failed. Please try again.')
     } finally {
