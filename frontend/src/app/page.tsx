@@ -1,7 +1,7 @@
 'use client'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { useSignIn, useSignUp, useUser } from '@clerk/nextjs'
+import { useSignIn, useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { 
   Brain, 
@@ -14,7 +14,6 @@ import {
 
 export default function Home() {
   const { signIn } = useSignIn()
-  const { signUp } = useSignUp()
   const { isSignedIn, user } = useUser()
   const router = useRouter()
 
@@ -23,21 +22,7 @@ export default function Home() {
   const handleGoogleAuth = async () => {
     console.log('🔄 Starting Google OAuth flow...')
     
-    // Try sign up first (handles both new users and existing users)
-    if (signUp) {
-      try {
-        await signUp.authenticateWithRedirect({
-          strategy: 'oauth_google',
-          redirectUrl: '/dashboard',
-          redirectUrlComplete: '/dashboard',
-        })
-        return
-      } catch (signUpError) {
-        console.log('Sign up failed, trying sign in...', signUpError)
-      }
-    }
-    
-    // Fallback to sign in for existing users
+    // Use signIn for OAuth flows - it handles both new and existing users
     if (signIn) {
       try {
         await signIn.authenticateWithRedirect({
@@ -45,12 +30,14 @@ export default function Home() {
           redirectUrl: '/dashboard',
           redirectUrlComplete: '/dashboard',
         })
-      } catch (signInError) {
-        console.error('❌ Both sign up and sign in failed:', signInError)
-        if (signInError instanceof Error) {
-          console.error('Error details:', signInError.message)
+      } catch (error) {
+        console.error('❌ Google OAuth failed:', error)
+        if (error instanceof Error) {
+          console.error('Error details:', error.message)
         }
       }
+    } else {
+      console.error('❌ SignIn hook not available')
     }
   }
 

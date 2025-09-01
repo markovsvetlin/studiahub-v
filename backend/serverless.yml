@@ -35,6 +35,9 @@ provider:
     MESSAGES_TABLE: ${self:service}-${self:provider.stage}-messages
     USAGE_TABLE: ${self:service}-${self:provider.stage}-usage
     SUBSCRIPTIONS_TABLE: ${self:service}-${self:provider.stage}-subscriptions
+    # CRITICAL: Set FRONTEND_URL environment variable to your production domain
+    # Example: FRONTEND_URL=https://yourdomain.com or https://yourdomain.vercel.app
+    # This is used for Stripe checkout success/cancel redirects
     FRONTEND_URL: ${env:FRONTEND_URL, 'http://localhost:3000'}
   iam:
     role:
@@ -205,8 +208,8 @@ functions:
 
   quizStatus:
     handler: src/handlers/quiz/quizStatus.getQuizStatus
-    timeout: 8
-    memorySize: 192
+    timeout: 15
+    memorySize: 512
     events:
       - httpApi:
           path: /quiz/{id}/status
@@ -214,8 +217,8 @@ functions:
 
   userQuizzes:
     handler: src/handlers/quiz/quizStatus.getUserQuizzes
-    timeout: 10
-    memorySize: 256
+    timeout: 15
+    memorySize: 512
     events:
       - httpApi:
           path: /quiz/user
