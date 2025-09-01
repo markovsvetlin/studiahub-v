@@ -1,5 +1,5 @@
 'use client'
-import { useUser, useClerk, useSignIn, useSignUp } from '@clerk/nextjs'
+import { useUser, useClerk, useSignIn } from '@clerk/nextjs'
 import Image from 'next/image'
 import Link from 'next/link'
 import { 
@@ -22,36 +22,27 @@ export default function Header({ mobileMetricsButton }: HeaderProps) {
   const { user } = useUser()
   const { signOut } = useClerk()
   const { signIn } = useSignIn()
-  const { signUp } = useSignUp()
+
+  // Let environment variables handle the redirect - no useEffect needed
 
   const handleGoogleAuth = async () => {
     console.log('🔄 Starting Google OAuth flow from header...')
     
-    // Try sign up first (handles both new users and existing users)
-    if (signUp) {
-      try {
-        await signUp.authenticateWithRedirect({
-          strategy: 'oauth_google',
-          redirectUrl: '/dashboard',
-          redirectUrlComplete: '/dashboard',
-        })
-        return
-      } catch (signUpError) {
-        console.log('Sign up failed, trying sign in...', signUpError)
-      }
-    }
-    
-    // Fallback to sign in for existing users
+    // NEW APPROACH: Only use signIn - it handles both new and existing users in OAuth flows
     if (signIn) {
       try {
+        console.log('🔑 Using signIn for OAuth (handles both new and existing users)...')
         await signIn.authenticateWithRedirect({
           strategy: 'oauth_google',
           redirectUrl: '/dashboard',
           redirectUrlComplete: '/dashboard',
         })
-      } catch (signInError) {
-        console.error('❌ Both sign up and sign in failed:', signInError)
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        console.error('❌ OAuth authentication failed:', errorMessage)
       }
+    } else {
+      console.error('❌ SignIn not available')
     }
   }
 

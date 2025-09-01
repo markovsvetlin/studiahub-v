@@ -1,8 +1,7 @@
 'use client'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { useSignIn, useSignUp, useUser } from '@clerk/nextjs'
-import { useRouter } from 'next/navigation'
+import { useSignIn, useUser } from '@clerk/nextjs'
 import { 
   Brain, 
   Zap, 
@@ -14,71 +13,31 @@ import {
 
 export default function Home() {
   const { signIn } = useSignIn()
-  const { signUp } = useSignUp()
   const { isSignedIn, user } = useUser()
-  const router = useRouter()
+
+  // Let environment variables handle the redirect - no useEffect needed
 
 
 
   const handleGoogleAuth = async () => {
     console.log('🔄 Starting Google OAuth flow...')
     
-    // For OAuth flows, prioritize signUp as it handles both new and existing users better
-    if (signUp) {
+    // NEW APPROACH: Only use signIn - it handles both new and existing users in OAuth flows
+    if (signIn) {
       try {
-        console.log('📝 Attempting sign up with OAuth...')
-        await signUp.authenticateWithRedirect({
-          strategy: 'oauth_google',
-          redirectUrl: window.location.origin + '/dashboard',
-          redirectUrlComplete: window.location.origin + '/dashboard',
-        })
-        return
-      } catch (signUpError: unknown) {
-        const errorMessage = signUpError instanceof Error ? signUpError.message : String(signUpError)
-        console.log('Sign up attempt failed:', errorMessage)
-        
-        // Only try signIn if the error suggests user already exists
-        const errorCode = signUpError && typeof signUpError === 'object' && 'code' in signUpError ? signUpError.code : null
-        if (errorCode === 'form_identifier_exists' || 
-            errorMessage?.includes('already exists') ||
-            errorMessage?.includes('account already exists')) {
-          console.log('👤 User exists, trying sign in...')
-          
-          if (signIn) {
-            try {
-              await signIn.authenticateWithRedirect({
-                strategy: 'oauth_google',
-                redirectUrl: window.location.origin + '/dashboard',
-                redirectUrlComplete: window.location.origin + '/dashboard',
-              })
-              return
-            } catch (signInError: unknown) {
-              const signInErrorMessage = signInError instanceof Error ? signInError.message : String(signInError)
-              console.error('❌ Sign in also failed:', signInErrorMessage)
-            }
-          }
-        } else {
-          console.error('❌ Sign up failed with unexpected error:', signUpError)
-        }
-      }
-    }
-    
-    // Last resort fallback to signIn only
-    if (signIn && !signUp) {
-      try {
-        console.log('🔑 Fallback to sign in only...')
+        console.log('🔑 Using signIn for OAuth (handles both new and existing users)...')
         await signIn.authenticateWithRedirect({
           strategy: 'oauth_google',
-          redirectUrl: window.location.origin + '/dashboard', 
-          redirectUrlComplete: window.location.origin + '/dashboard',
+          redirectUrl: '/dashboard',
+          redirectUrlComplete: '/dashboard',
         })
       } catch (error: unknown) {
-        const finalErrorMessage = error instanceof Error ? error.message : String(error)
-        console.error('❌ Final sign in attempt failed:', finalErrorMessage)
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        console.error('❌ OAuth authentication failed:', errorMessage)
       }
+    } else {
+      console.error('❌ SignIn not available')
     }
-    
-    console.error('❌ All authentication methods failed')
   }
 
   return (
@@ -148,7 +107,7 @@ export default function Home() {
                     <Button 
                       variant="outline" 
                       size="lg"
-                      onClick={isSignedIn ? () => router.push('/dashboard') : handleGoogleAuth}
+                      onClick={isSignedIn ? () => window.location.href = '/dashboard' : handleGoogleAuth}
                       className="w-full border-slate-500/50 hover:bg-slate-700/50 py-6 text-lg rounded-xl bg-slate-700/30 text-white"
                     >
                       <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
