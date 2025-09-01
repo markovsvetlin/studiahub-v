@@ -1,7 +1,7 @@
 'use client'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { useUser, GoogleOneTap } from '@clerk/nextjs'
+import { useUser, useClerk } from '@clerk/nextjs'
 import { 
   Brain, 
   Zap, 
@@ -13,23 +13,17 @@ import {
 
 export default function Home() {
   const { isSignedIn, user } = useUser()
-
-
+  const { openSignIn } = useClerk()
 
   const handleGoogleAuth = () => {
-    // This is just a fallback - GoogleOneTap will handle most cases
-    window.location.href = '/sign-in?redirect_url=' + encodeURIComponent('/dashboard')
+    // DIRECT authentication - no modal, no redirect mess
+    openSignIn({
+      afterSignInUrl: '/dashboard',
+      afterSignUpUrl: '/dashboard',
+    })
   }
   return (
     <div className="min-h-screen relative">
-      {/* Google One Tap - Auto shows for users, handles both new and existing */}
-      {!isSignedIn && (
-        <GoogleOneTap 
-          signInForceRedirectUrl="/dashboard"
-          signUpForceRedirectUrl="/dashboard"
-        />
-      )}
-      
       {/* Beautiful Unified Background Gradient */}
       <div 
         className="absolute inset-0 w-full h-full"
