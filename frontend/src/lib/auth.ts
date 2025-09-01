@@ -6,6 +6,13 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      authorization: {
+        params: {
+          scope: "openid email profile",
+          access_type: "offline",
+          prompt: "consent",
+        },
+      },
     })
   ],
   callbacks: {
@@ -18,9 +25,36 @@ export const authOptions: NextAuthOptions = {
         token.image = user.image
       }
       
-      // Add access token from Google
-      if (account?.access_token) {
-        token.accessToken = account.access_token
+      // Add tokens from Google OAuth
+      if (account) {
+        token.accessToken = account.access_token || ''
+        token.refreshToken = account.refresh_token
+        token.accessTokenExpires = account.expires_at! * 1000 // Convert to milliseconds
+      }
+
+      // If access token is still valid, return existing token
+      if (token.accessTokenExpires && Date.now() < token.accessTokenExpires) {
+        return token
+      }
+
+      // Access token has expired, try to refresh it
+      if (token.refreshToken) {
+        try {
+          const refreshedTokens = await refreshAccessToken(token.refreshToken)
+          return {
+            ...token,
+            accessToken: refreshedTokens.access_token,
+            accessTokenExpires: Date.now() + refreshedTokens.expires_in * 1000,
+            refreshToken: refreshedTokens.refresh_token ?? token.refreshToken, // Keep old refresh token if none returned
+          }
+        } catch (error) {
+          console.error('Error refreshing access token:', error)
+          // Return token with error flag so we can handle this in the session callback
+          return {
+            ...token,
+            error: "RefreshAccessTokenError"
+          }
+        }
       }
       
       return token
@@ -36,6 +70,7 @@ export const authOptions: NextAuthOptions = {
       
       // Add access token to session
       session.accessToken = token.accessToken as string
+      session.error = token.error as string | undefined
       
       return session
     },
@@ -61,4 +96,37 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt'
   },
   secret: process.env.NEXTAUTH_SECRET,
+}
+
+/**
+ * Refresh the Google access token using the refresh token
+ */
+async function refreshAccessToken(refreshToken: string) {
+  try {
+    const url = 'https://oauth2.googleapis.com/token'
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID!,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+        grant_type: 'refresh_token',
+        refresh_token: refreshToken,
+      })
+    })
+
+    const refreshedTokens = await response.json()
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}, message: ${refreshedTokens.error_description || refreshedTokens.error}`)
+    }
+
+    return refreshedTokens
+  } catch (error) {
+    console.error('Error refreshing access token:', error)
+    throw error
+  }
 }
