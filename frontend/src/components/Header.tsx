@@ -1,5 +1,5 @@
 'use client'
-import { useUser, useClerk, useSignIn } from '@clerk/nextjs'
+import { useUser, useClerk } from '@clerk/nextjs'
 import Image from 'next/image'
 import Link from 'next/link'
 import { 
@@ -21,29 +21,11 @@ interface HeaderProps {
 export default function Header({ mobileMetricsButton }: HeaderProps) {
   const { user } = useUser()
   const { signOut } = useClerk()
-  const { signIn } = useSignIn()
 
-  // Let environment variables handle the redirect - no useEffect needed
-
-  const handleGoogleAuth = async () => {
-    console.log('🔄 Starting Google OAuth flow from header...')
-    
-    // NEW APPROACH: Only use signIn - it handles both new and existing users in OAuth flows
-    if (signIn) {
-      try {
-        console.log('🔑 Using signIn for OAuth (handles both new and existing users)...')
-        await signIn.authenticateWithRedirect({
-          strategy: 'oauth_google',
-          redirectUrl: '/dashboard',
-          redirectUrlComplete: '/dashboard',
-        })
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : String(error)
-        console.error('❌ OAuth authentication failed:', errorMessage)
-      }
-    } else {
-      console.error('❌ SignIn not available')
-    }
+  const handleGoogleAuth = () => {
+    // Use Clerk's hosted sign-in page - handles both new AND existing users
+    const redirectUrl = encodeURIComponent(window.location.origin + '/dashboard')
+    window.location.href = `/sign-in?redirect_url=${redirectUrl}`
   }
 
   return (

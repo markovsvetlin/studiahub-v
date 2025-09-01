@@ -1,7 +1,7 @@
 'use client'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { useSignIn, useUser } from '@clerk/nextjs'
+import { useSignIn, useSignUp, useUser } from '@clerk/nextjs'
 import { 
   Brain, 
   Zap, 
@@ -10,36 +10,55 @@ import {
   Play,
   Clock
 } from 'lucide-react'
+import { useState } from 'react'
 
 export default function Home() {
   const { signIn } = useSignIn()
+  const { signUp } = useSignUp()
   const { isSignedIn, user } = useUser()
-
+  const [isLoading, setIsLoading] = useState(false)
   // Let environment variables handle the redirect - no useEffect needed
 
 
 
   const handleGoogleAuth = async () => {
+    if (isLoading) return
+    
+    setIsLoading(true)
     console.log('🔄 Starting Google OAuth flow...')
     
-    // NEW APPROACH: Only use signIn - it handles both new and existing users in OAuth flows
-    if (signIn) {
-      try {
-        console.log('🔑 Using signIn for OAuth (handles both new and existing users)...')
+    try {
+      // First try to sign in (for existing users)
+      if (signIn) {
+        console.log('🔑 Attempting sign in for existing users...')
         await signIn.authenticateWithRedirect({
           strategy: 'oauth_google',
           redirectUrl: '/dashboard',
           redirectUrlComplete: '/dashboard',
         })
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : String(error)
-        console.error('❌ OAuth authentication failed:', errorMessage)
       }
-    } else {
-      console.error('❌ SignIn not available')
+    } catch (signInError: any) {
+      console.log('Sign in failed, trying sign up...', signInError)
+      
+      // If sign in fails, try sign up (for new users)
+      try {
+        if (signUp) {
+          console.log('📝 Attempting sign up for new users...')
+          await signUp.authenticateWithRedirect({
+            strategy: 'oauth_google',
+            redirectUrl: '/dashboard',
+            redirectUrlComplete: '/dashboard',
+          })
+        }
+      } catch (signUpError: any) {
+        console.error('❌ Both sign in and sign up failed:', signUpError)
+        // You could show a toast notification here
+        alert('Authentication failed. Please try again.')
+      }
+    } finally {
+      setIsLoading(false)
     }
   }
-
   return (
     <div className="min-h-screen relative">
       {/* Beautiful Unified Background Gradient */}
