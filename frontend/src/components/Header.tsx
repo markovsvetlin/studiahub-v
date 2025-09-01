@@ -1,5 +1,5 @@
 'use client'
-import { useUser, useClerk, useSignIn } from '@clerk/nextjs'
+import { useUser, useClerk, useSignIn, useSignUp } from '@clerk/nextjs'
 import Image from 'next/image'
 import Link from 'next/link'
 import { 
@@ -22,18 +22,36 @@ export default function Header({ mobileMetricsButton }: HeaderProps) {
   const { user } = useUser()
   const { signOut } = useClerk()
   const { signIn } = useSignIn()
+  const { signUp } = useSignUp()
 
-  const handleGoogleSignIn = async () => {
-    if (!signIn) return
+  const handleGoogleAuth = async () => {
+    console.log('🔄 Starting Google OAuth flow from header...')
     
-    try {
-      await signIn.authenticateWithRedirect({
-        strategy: 'oauth_google',
-        redirectUrl: '/dashboard',
-        redirectUrlComplete: '/dashboard',
-      })
-    } catch (error) {
-      console.error('Error signing in with Google:', error)
+    // Try sign up first (handles both new users and existing users)
+    if (signUp) {
+      try {
+        await signUp.authenticateWithRedirect({
+          strategy: 'oauth_google',
+          redirectUrl: '/dashboard',
+          redirectUrlComplete: '/dashboard',
+        })
+        return
+      } catch (signUpError) {
+        console.log('Sign up failed, trying sign in...', signUpError)
+      }
+    }
+    
+    // Fallback to sign in for existing users
+    if (signIn) {
+      try {
+        await signIn.authenticateWithRedirect({
+          strategy: 'oauth_google',
+          redirectUrl: '/dashboard',
+          redirectUrlComplete: '/dashboard',
+        })
+      } catch (signInError) {
+        console.error('❌ Both sign up and sign in failed:', signInError)
+      }
     }
   }
 
@@ -128,7 +146,7 @@ export default function Header({ mobileMetricsButton }: HeaderProps) {
             ) : (
               <div className="flex items-center space-x-2">
                 <Button 
-                  onClick={handleGoogleSignIn}
+                  onClick={handleGoogleAuth}
                   className="bg-indigo-600 hover:bg-indigo-700 text-white"
                 >
                   Sign in with Google
