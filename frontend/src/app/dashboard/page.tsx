@@ -108,7 +108,7 @@ function MainContent({ isMobileSidebarOpen, setIsMobileSidebarOpen }: MainConten
   // Show sign-in message only after we've confirmed user is not authenticated
   if (isLoaded && (!user || !isSignedIn)) {
     // Use Next.js router for better redirect handling
-    router.push('/')
+    // router.push('/')
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
