@@ -28,34 +28,31 @@ export default function Home() {
     console.log('🔄 Starting Google OAuth flow...')
     
     try {
-      // First try to sign in (for existing users)
-      if (signIn) {
-        console.log('🔑 Attempting sign in for existing users...')
+      // For OAuth flows, Clerk can auto-determine sign-in vs sign-up
+      // Use signUp.authenticateWithRedirect as it handles both cases better
+      if (signUp) {
+        console.log('🔑 Using signUp OAuth flow (handles both new and existing users)...')
+        await signUp.authenticateWithRedirect({
+          strategy: 'oauth_google',
+          redirectUrl: '/dashboard',
+          redirectUrlComplete: '/dashboard',
+        })
+      } else if (signIn) {
+        // Fallback to signIn if signUp not available
+        console.log('🔄 Fallback to signIn OAuth flow...')
         await signIn.authenticateWithRedirect({
           strategy: 'oauth_google',
           redirectUrl: '/dashboard',
           redirectUrlComplete: '/dashboard',
         })
+      } else {
+        throw new Error('Neither signUp nor signIn available')
       }
-    } catch (signInError) {
-      console.log('Sign in failed, trying sign up...', signInError)
-      
-      // If sign in fails, try sign up (for new users)
-      try {
-        if (signUp) {
-          console.log('📝 Attempting sign up for new users...')
-          await signUp.authenticateWithRedirect({
-            strategy: 'oauth_google',
-            redirectUrl: '/dashboard',
-            redirectUrlComplete: '/dashboard',
-          })
-        }
-      } catch (signUpError) {
-        console.error('❌ Both sign in and sign up failed:', signUpError)
-        // You could show a toast notification here
-        alert('Authentication failed. Please try again.')
-      }
+    } catch (error: any) {
+      console.error('❌ OAuth authentication failed:', error)
+      alert('Authentication failed. Please try again.')
     } finally {
+      // Note: This might not execute due to redirect, but good practice
       setIsLoading(false)
     }
   }
