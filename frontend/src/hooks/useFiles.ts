@@ -37,7 +37,15 @@ export function useFiles(userId?: string, refreshUsage?: () => void) {
       setFiles(data.files || [])
       
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch files')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch files'
+      
+      // Don't show auth errors as they will trigger redirect
+      if (errorMessage.includes('Authentication expired') || errorMessage.includes('No authentication session')) {
+        console.log('Authentication error in fetchFiles, redirecting...')
+        return
+      }
+      
+      setError(errorMessage)
       setFiles([])
     } finally {
       setIsLoading(false)
@@ -79,7 +87,7 @@ export function useFiles(userId?: string, refreshUsage?: () => void) {
       ))
       setError(err instanceof Error ? err.message : 'Failed to toggle file')
     }
-  }, [session])
+  }, [])
 
   const deleteFile = useCallback(async (fileId: string) => {
     try {
@@ -109,7 +117,7 @@ export function useFiles(userId?: string, refreshUsage?: () => void) {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete file')
     }
-  }, [refreshUsage, session])
+  }, [refreshUsage])
 
   useEffect(() => {
     fetchFiles()

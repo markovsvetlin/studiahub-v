@@ -13,17 +13,30 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000'
 import { getAuthHeaders } from '@/utils/auth'
 
 export async function getSubscription(): Promise<SubscriptionData> {
-  const headers = await getAuthHeaders()
+  try {
+    const headers = await getAuthHeaders()
 
-  const response = await fetch(`${API_BASE_URL}/subscriptions/user`, {
-    headers
-  })
-  
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`)
+    const response = await fetch(`${API_BASE_URL}/subscriptions/user`, {
+      headers
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    return response.json()
+  } catch (error) {
+    // Re-throw authentication errors to trigger redirect
+    if (error instanceof Error && (
+      error.message.includes('Authentication expired') || 
+      error.message.includes('No authentication session')
+    )) {
+      throw error
+    }
+    
+    // Handle other errors
+    throw new Error('Failed to fetch subscription data')
   }
-
-  return response.json()
 }
 
 /**

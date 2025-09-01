@@ -8,5 +8,16 @@ interface AuthProviderProps {
 }
 
 export default function AuthProvider({ children }: AuthProviderProps) {
-  return <SessionProvider>{children}</SessionProvider>
+  return (
+    <SessionProvider
+      // Refetch session every 5 minutes
+      refetchInterval={5 * 60}
+      // Refetch on window focus
+      refetchOnWindowFocus={true}
+      // Keep session in sync across browser tabs
+      refetchWhenOffline={false}
+    >
+      {children}
+    </SessionProvider>
+  )
 }

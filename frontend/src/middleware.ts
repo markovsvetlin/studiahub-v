@@ -2,13 +2,28 @@ import { withAuth } from 'next-auth/middleware'
 
 export default withAuth(
   // Optional: Add additional middleware logic here
-  function middleware(req) {
+  function middleware() {
     // You can add custom logic here if needed
   },
   {
     callbacks: {
-      authorized: ({ token }) => {
-        // Allow access for now - you can add authorization logic later
+      authorized: ({ token, req }) => {
+        // If there's a refresh token error, deny access to force re-authentication
+        if (token?.error === "RefreshAccessTokenError") {
+          return false
+        }
+        
+        // For dashboard routes, require valid authentication
+        if (req.nextUrl.pathname.startsWith('/dashboard')) {
+          return !!token
+        }
+        
+        // For API routes, require valid authentication
+        if (req.nextUrl.pathname.startsWith('/api/')) {
+          return !!token
+        }
+        
+        // Allow access to public routes
         return true
       },
     },
