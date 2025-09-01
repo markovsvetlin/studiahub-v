@@ -13,13 +13,12 @@ import {
 
 export default function Home() {
   const { isSignedIn, user } = useUser()
-  const { openSignIn } = useClerk()
+  const { redirectToSignIn } = useClerk()
 
   const handleGoogleAuth = () => {
-    // DIRECT authentication - no modal, no redirect mess
-    openSignIn({
-      afterSignInUrl: '/dashboard',
-      afterSignUpUrl: '/dashboard',
+    // DIRECT CLERK REDIRECT - handles both new and existing users
+    redirectToSignIn({
+      redirectUrl: '/dashboard'
     })
   }
   return (

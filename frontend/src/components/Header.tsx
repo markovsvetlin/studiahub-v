@@ -20,13 +20,12 @@ interface HeaderProps {
 
 export default function Header({ mobileMetricsButton }: HeaderProps) {
   const { user } = useUser()
-  const { signOut, openSignIn } = useClerk()
+  const { signOut, redirectToSignIn } = useClerk()
 
   const handleGoogleAuth = () => {
-    // Same direct approach as main page
-    openSignIn({
-      afterSignInUrl: '/dashboard',
-      afterSignUpUrl: '/dashboard',
+    // DIRECT CLERK REDIRECT - handles both new and existing users
+    redirectToSignIn({
+      redirectUrl: '/dashboard'
     })
   }
 
