@@ -1,7 +1,7 @@
 'use client'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { useSignIn, useSignUp, useUser } from '@clerk/nextjs'
+import { useUser, GoogleOneTap } from '@clerk/nextjs'
 import { 
   Brain, 
   Zap, 
@@ -10,54 +10,26 @@ import {
   Play,
   Clock
 } from 'lucide-react'
-import { useState } from 'react'
 
 export default function Home() {
-  const { signIn } = useSignIn()
-  const { signUp } = useSignUp()
   const { isSignedIn, user } = useUser()
-  const [isLoading, setIsLoading] = useState(false)
-  // Let environment variables handle the redirect - no useEffect needed
 
 
 
-  const handleGoogleAuth = async () => {
-    if (isLoading) return
-    
-    setIsLoading(true)
-    console.log('🔄 Starting Google OAuth flow...')
-    
-    try {
-      // For OAuth flows, Clerk can auto-determine sign-in vs sign-up
-      // Use signUp.authenticateWithRedirect as it handles both cases better
-      if (signUp) {
-        console.log('🔑 Using signUp OAuth flow (handles both new and existing users)...')
-        await signUp.authenticateWithRedirect({
-          strategy: 'oauth_google',
-          redirectUrl: '/dashboard',
-          redirectUrlComplete: '/dashboard',
-        })
-      } else if (signIn) {
-        // Fallback to signIn if signUp not available
-        console.log('🔄 Fallback to signIn OAuth flow...')
-        await signIn.authenticateWithRedirect({
-          strategy: 'oauth_google',
-          redirectUrl: '/dashboard',
-          redirectUrlComplete: '/dashboard',
-        })
-      } else {
-        throw new Error('Neither signUp nor signIn available')
-      }
-    } catch (error) {
-      console.error('❌ OAuth authentication failed:', error)
-      alert('Authentication failed. Please try again.')
-    } finally {
-      // Note: This might not execute due to redirect, but good practice
-      setIsLoading(false)
-    }
+  const handleGoogleAuth = () => {
+    // This is just a fallback - GoogleOneTap will handle most cases
+    window.location.href = '/sign-in?redirect_url=' + encodeURIComponent('/dashboard')
   }
   return (
     <div className="min-h-screen relative">
+      {/* Google One Tap - Auto shows for users, handles both new and existing */}
+      {!isSignedIn && (
+        <GoogleOneTap 
+          signInForceRedirectUrl="/dashboard"
+          signUpForceRedirectUrl="/dashboard"
+        />
+      )}
+      
       {/* Beautiful Unified Background Gradient */}
       <div 
         className="absolute inset-0 w-full h-full"
