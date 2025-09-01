@@ -12,6 +12,7 @@ import { useFiles } from '@/hooks/useFiles'
 import { useUsage } from '@/hooks/useUsage'
 import { useSubscription } from '@/hooks/useSubscription'
 import { useUser } from '@clerk/nextjs'
+import { useRouter } from 'next/navigation'
 
 export default function Dashboard() {
   return (
@@ -53,6 +54,7 @@ interface MainContentProps {
 
 function MainContent({ isMobileSidebarOpen, setIsMobileSidebarOpen }: MainContentProps) {
   const { user, isLoaded, isSignedIn } = useUser()
+  const router = useRouter()
   
   // Debug: Let's see what's happening with auth state
   console.log('🔍 Auth State Check:', { isLoaded, isSignedIn, hasUser: !!user, userId: user?.id })
@@ -105,11 +107,14 @@ function MainContent({ isMobileSidebarOpen, setIsMobileSidebarOpen }: MainConten
 
   // Show sign-in message only after we've confirmed user is not authenticated
   if (isLoaded && (!user || !isSignedIn)) {
-    // Force redirect to home page
-    window.location.href = '/'
+    // Use Next.js router for better redirect handling
+    router.push('/')
     return (
-      <div className="max-w-4xl mx-auto p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-center">
-        <p className="mb-4">Redirecting to sign in...</p>
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-2 border-indigo-400/30 border-t-indigo-400 rounded-full animate-spin" />
+          <p className="text-neutral-400 text-sm">Redirecting to sign in...</p>
+        </div>
       </div>
     )
   }

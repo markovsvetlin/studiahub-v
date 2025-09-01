@@ -27,7 +27,7 @@ export interface UsageData {
   resetDateFormatted: string
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3000/api'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE || 'https://oyehv715ef.execute-api.us-east-1.amazonaws.com'
 
 export function useUsage(userId?: string) {
   const { getToken } = useAuth()

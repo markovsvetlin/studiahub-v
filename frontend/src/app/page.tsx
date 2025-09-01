@@ -20,16 +20,24 @@ export default function Home() {
 
 
   const handleGoogleSignIn = async () => {
-    if (!signIn) return
+    if (!signIn) {
+      console.error('SignIn not available - Clerk may not be properly configured')
+      return
+    }
     
     try {
+      console.log('🔄 Starting Google OAuth flow...')
       await signIn.authenticateWithRedirect({
         strategy: 'oauth_google',
         redirectUrl: '/dashboard',
         redirectUrlComplete: '/dashboard',
       })
     } catch (error) {
-      console.error('Error signing in with Google:', error)
+      console.error('❌ Error signing in with Google:', error)
+      // You could add a toast notification here if needed
+      if (error instanceof Error) {
+        console.error('Error details:', error.message)
+      }
     }
   }
 
