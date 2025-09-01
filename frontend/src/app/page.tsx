@@ -1,7 +1,7 @@
 'use client'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { useSignIn, useUser } from '@clerk/nextjs'
+import { useSignIn, useSignUp, useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { 
   Brain, 
@@ -14,6 +14,7 @@ import {
 
 export default function Home() {
   const { signIn } = useSignIn()
+  const { signUp } = useSignUp()
   const { isSignedIn, user } = useUser()
   const router = useRouter()
 
@@ -22,23 +23,62 @@ export default function Home() {
   const handleGoogleAuth = async () => {
     console.log('🔄 Starting Google OAuth flow...')
     
-    // Use signIn for OAuth flows - it handles both new and existing users
-    if (signIn) {
+    // For OAuth flows, prioritize signUp as it handles both new and existing users better
+    if (signUp) {
       try {
-        await signIn.authenticateWithRedirect({
+        console.log('📝 Attempting sign up with OAuth...')
+        await signUp.authenticateWithRedirect({
           strategy: 'oauth_google',
-          redirectUrl: '/dashboard',
-          redirectUrlComplete: '/dashboard',
+          redirectUrl: window.location.origin + '/dashboard',
+          redirectUrlComplete: window.location.origin + '/dashboard',
         })
-      } catch (error) {
-        console.error('❌ Google OAuth failed:', error)
-        if (error instanceof Error) {
-          console.error('Error details:', error.message)
+        return
+      } catch (signUpError: unknown) {
+        const errorMessage = signUpError instanceof Error ? signUpError.message : String(signUpError)
+        console.log('Sign up attempt failed:', errorMessage)
+        
+        // Only try signIn if the error suggests user already exists
+        const errorCode = signUpError && typeof signUpError === 'object' && 'code' in signUpError ? signUpError.code : null
+        if (errorCode === 'form_identifier_exists' || 
+            errorMessage?.includes('already exists') ||
+            errorMessage?.includes('account already exists')) {
+          console.log('👤 User exists, trying sign in...')
+          
+          if (signIn) {
+            try {
+              await signIn.authenticateWithRedirect({
+                strategy: 'oauth_google',
+                redirectUrl: window.location.origin + '/dashboard',
+                redirectUrlComplete: window.location.origin + '/dashboard',
+              })
+              return
+            } catch (signInError: unknown) {
+              const signInErrorMessage = signInError instanceof Error ? signInError.message : String(signInError)
+              console.error('❌ Sign in also failed:', signInErrorMessage)
+            }
+          }
+        } else {
+          console.error('❌ Sign up failed with unexpected error:', signUpError)
         }
       }
-    } else {
-      console.error('❌ SignIn hook not available')
     }
+    
+    // Last resort fallback to signIn only
+    if (signIn && !signUp) {
+      try {
+        console.log('🔑 Fallback to sign in only...')
+        await signIn.authenticateWithRedirect({
+          strategy: 'oauth_google',
+          redirectUrl: window.location.origin + '/dashboard', 
+          redirectUrlComplete: window.location.origin + '/dashboard',
+        })
+      } catch (error: unknown) {
+        const finalErrorMessage = error instanceof Error ? error.message : String(error)
+        console.error('❌ Final sign in attempt failed:', finalErrorMessage)
+      }
+    }
+    
+    console.error('❌ All authentication methods failed')
   }
 
   return (
