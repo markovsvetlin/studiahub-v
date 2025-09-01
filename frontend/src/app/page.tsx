@@ -37,7 +37,7 @@ export default function Home() {
           redirectUrlComplete: '/dashboard',
         })
       }
-    } catch (signInError: any) {
+    } catch (signInError) {
       console.log('Sign in failed, trying sign up...', signInError)
       
       // If sign in fails, try sign up (for new users)
@@ -50,7 +50,7 @@ export default function Home() {
             redirectUrlComplete: '/dashboard',
           })
         }
-      } catch (signUpError: any) {
+      } catch (signUpError) {
         console.error('❌ Both sign in and sign up failed:', signUpError)
         // You could show a toast notification here
         alert('Authentication failed. Please try again.')
